@@ -1,13 +1,19 @@
 #pragma once
 #include "KamataEngine.h"
-using namespace KamataEngine;
 
 class SkyDome {
-public:
-	void Initialize();
-	void Draw(Camera& cam);
 
-private:
-	Model* model_ = nullptr;
-	WorldTransform wt_{};
+public: 
+
+	~SkyDome();
+	
+	void Initialize();
+
+	void Update();
+
+	void Draw(KamataEngine::Camera& viewProjection);
+
+private:                                          // メンバ変数
+	KamataEngine::WorldTransform worldTransform_; // ワールド変換データ
+	KamataEngine::Model* model_ = nullptr;        // モデル
 };

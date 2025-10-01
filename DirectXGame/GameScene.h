@@ -5,6 +5,8 @@
 #include "Player.h"
 #include "SceneState.h"
 
+#include "SkyDome.h"
+
 #include "HpBar2D.h"
 #include "HpBarBillboard.h"
 
@@ -39,6 +41,8 @@ private:
 	// 実体
 	Player* player_ = nullptr;
 	Enemy* enemy_ = nullptr;
+
+	SkyDome* skydome_ = nullptr;
 
 	// シーン遷移
 	bool next_ = false;

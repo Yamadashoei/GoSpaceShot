@@ -16,13 +16,10 @@ bool GameScene::SphereHit(const Vector3& a, float ra, const Vector3& b, float rb
 
 GameScene::~GameScene() {
 	delete player_;
-	player_ = nullptr;
 	delete enemy_;
-	enemy_ = nullptr;
 	delete modelPlayer_;
-	modelPlayer_ = nullptr;
 	delete modelEnemy_;
-	modelEnemy_ = nullptr;
+	delete skydome_;
 }
 
 void GameScene::Initialize() {
@@ -43,11 +40,10 @@ void GameScene::Initialize() {
 	// 実体
 	player_ = new Player();
 	player_->Initialize(modelPlayer_);
-	player_->SetPosition({0.0f, 0.0f, 20.0f}); 
+	player_->SetPosition({0.0f, 0.0f, 20.0f});
 
 	enemy_ = new Enemy();
-	enemy_->Initialize(modelEnemy_, {0.0f, 0.0f, 40.0f}); 
-
+	enemy_->Initialize(modelEnemy_, {0.0f, 0.0f, 40.0f});
 
 	// 遷移フラグ初期化
 	next_ = false;
@@ -61,6 +57,10 @@ void GameScene::Initialize() {
 
 	// 敵の頭上にHPバー
 	enemyHpUI_.Initialize(whiteTex_, {100.0f, 8.0f}, {0.0f, 3.0f, 0.0f});
+
+	// スカイドーム
+	skydome_ = new SkyDome();
+	skydome_->Initialize();
 }
 
 void GameScene::Update() {
@@ -86,10 +86,18 @@ void GameScene::Update() {
 
 	// 敵HPバー用
 	enemyHpUI_.Update(enemy_->GetPosition(), camera_, enemy_->GetHP(), enemy_->GetMaxHP(), WinApp::kWindowWidth, WinApp::kWindowHeight);
+
+	skydome_->Update();
 }
 
 void GameScene::Draw() {
 	ID3D12GraphicsCommandList* cmd = dxCommon_->GetCommandList();
+
+	Model::PreDraw();
+	enemy_->Draw(camera_);
+	player_->Draw(camera_);
+	skydome_->Draw(camera_);
+	Model::PostDraw();
 
 	Sprite::PreDraw(cmd);
 	playerHpUI_.Draw();
@@ -97,11 +105,6 @@ void GameScene::Draw() {
 	Sprite::PostDraw();
 
 	dxCommon_->ClearDepthBuffer();
-
-	Model::PreDraw();
-	enemy_->Draw(camera_);
-	player_->Draw(camera_);
-	Model::PostDraw();
 }
 
 void GameScene::HandleCollisions() {
