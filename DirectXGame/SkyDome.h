@@ -13,7 +13,7 @@ public:
 
 	void Draw(KamataEngine::Camera& viewProjection);
 
-private:                                          // メンバ変数
-	KamataEngine::WorldTransform worldTransform_; // ワールド変換データ
-	KamataEngine::Model* model_ = nullptr;        // モデル
+private:
+	KamataEngine::WorldTransform worldTransform_;
+	KamataEngine::Model* model_ = nullptr;
 };

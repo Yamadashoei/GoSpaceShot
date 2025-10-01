@@ -35,7 +35,7 @@ private:
 
 	// 弾
 	std::list<PlayerBullet> bullets_;
-	float bulletSpeed_ = 0.8f; // Z+ へ
+	float bulletSpeed_ = 0.8f; // +Z
 
 	// 当たり判定（球）
 	float radius_ = 1.0f;

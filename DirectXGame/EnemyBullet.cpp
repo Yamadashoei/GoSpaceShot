@@ -3,7 +3,7 @@
 
 using namespace KamataEngine;
 
-// 静的メンバの実体
+
 Model* EnemyBullet::sModel_ = nullptr;
 
 void EnemyBullet::Initialize(Model*, const Vector3& pos, const Vector3& vel) { Initialize(pos, vel); }

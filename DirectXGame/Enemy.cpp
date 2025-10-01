@@ -43,7 +43,7 @@ void Enemy::SetSpeed(float unitsPerSec) {
 }
 
 void Enemy::Update(const Vector3& playerPos, float deltaSec) {
-	// --- 左右往復移動 ---
+	//左右往復移動
 	wt_.translation_.x += moveSpeedX_ * deltaSec; // 秒間速度×経過秒
 
 	// 端で反転
@@ -55,7 +55,7 @@ void Enemy::Update(const Vector3& playerPos, float deltaSec) {
 		moveSpeedX_ = -std::abs(moveSpeedX_); // 左へ
 	}
 
-	// --- 5秒ごとにプレイヤー方向へ発射 ---
+	// 5秒ごとにプレイヤー方向へ発射
 	shotTimerSec_ += deltaSec;
 	if (shotTimerSec_ >= shotIntervalSec_) {
 		shotTimerSec_ = 0.0f;

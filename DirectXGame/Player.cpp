@@ -8,7 +8,7 @@ void Player::Initialize(Model* model) {
 	input_ = Input::GetInstance();
 
 	wt_.Initialize();
-	// カメラが z=-10 
+	// カメラに位置 z=-10 
 	wt_.translation_ = {0.0f, 0.0f, 0.0f};
 	wt_.UpdateMatrix();
 	wt_.TransferMatrix();
@@ -33,14 +33,14 @@ void Player::Update() {
 	if (input_->PushKey(DIK_S))
 		wt_.translation_.y -= moveSpeed_;
 
-	// 発射（SPACE または 左クリック）
+	// 発射
 	const bool trig = input_->TriggerKey(DIK_SPACE) || input_->IsTriggerMouse(0);
 	if (trig) {
-		// 自機のちょい前（Z+）から発射
+		// 自機*Z軸に発射
 		KamataEngine::Vector3 spawn = wt_.translation_;
 		spawn.z += 0.6f; 
 
-		// 画面の奥へ（+Z 方向）
+		// Z軸方向へ +
 		KamataEngine::Vector3 vel = {0.0f, 0.0f, bulletSpeed_};
 
 		auto& b = bullets_.emplace_back();

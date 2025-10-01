@@ -6,14 +6,14 @@ using namespace KamataEngine;
 SkyDome::~SkyDome() { delete model_; }
 
 void SkyDome::Initialize() {
-	// 引数で受け取ったデータをメンバ変数に記録
+	// 引数で受け取ったデータをメンバ変数
 	model_ = Model::CreateFromOBJ("skydome");
 	// ワールド変換の初期化
 	worldTransform_.Initialize();
 }
 
 void SkyDome::Update() {
-	// ワールドトランスフォームの更新
+	
 	worldTransform_.UpdateMatrix();
 }
 

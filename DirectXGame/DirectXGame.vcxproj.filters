@@ -16,6 +16,18 @@
     <Filter Include="シェーダー ファイル">
       <UniqueIdentifier>{718c7f4c-fc51-40ad-a221-b9456a7a1a3c}</UniqueIdentifier>
     </Filter>
+    <Filter Include="player">
+      <UniqueIdentifier>{b3b7dde9-23b2-4667-a190-8f300ea30652}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="enemy">
+      <UniqueIdentifier>{17dcfb25-3674-47d4-b530-dace3bf82d04}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="scene">
+      <UniqueIdentifier>{8fc2981c-7d35-495d-8be5-c78c87d59294}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="UI">
+      <UniqueIdentifier>{3ae60bb9-7123-484f-a7b1-06ea15982295}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp">
@@ -24,50 +36,50 @@
     <ClCompile Include="Collision.cpp">
       <Filter>ソース ファイル</Filter>
     </ClCompile>
-    <ClCompile Include="Enemy.cpp">
-      <Filter>ソース ファイル</Filter>
-    </ClCompile>
-    <ClCompile Include="EnemyBullet.cpp">
-      <Filter>ソース ファイル</Filter>
-    </ClCompile>
-    <ClCompile Include="GameClear.cpp">
-      <Filter>ソース ファイル</Filter>
-    </ClCompile>
-    <ClCompile Include="GameOver.cpp">
-      <Filter>ソース ファイル</Filter>
-    </ClCompile>
-    <ClCompile Include="GameScene.cpp">
-      <Filter>ソース ファイル</Filter>
-    </ClCompile>
-    <ClCompile Include="HpBar2D.cpp">
-      <Filter>ソース ファイル</Filter>
-    </ClCompile>
-    <ClCompile Include="HpBarBillboard.cpp">
-      <Filter>ソース ファイル</Filter>
-    </ClCompile>
     <ClCompile Include="kMath.cpp">
-      <Filter>ソース ファイル</Filter>
-    </ClCompile>
-    <ClCompile Include="Player.cpp">
-      <Filter>ソース ファイル</Filter>
-    </ClCompile>
-    <ClCompile Include="PlayerBullet.cpp">
-      <Filter>ソース ファイル</Filter>
-    </ClCompile>
-    <ClCompile Include="Rule.cpp">
-      <Filter>ソース ファイル</Filter>
-    </ClCompile>
-    <ClCompile Include="SceneState.cpp">
       <Filter>ソース ファイル</Filter>
     </ClCompile>
     <ClCompile Include="SkyDome.cpp">
       <Filter>ソース ファイル</Filter>
     </ClCompile>
-    <ClCompile Include="Title.cpp">
-      <Filter>ソース ファイル</Filter>
-    </ClCompile>
     <ClCompile Include="WorldTransformEx.cpp">
       <Filter>ソース ファイル</Filter>
+    </ClCompile>
+    <ClCompile Include="PlayerBullet.cpp">
+      <Filter>player</Filter>
+    </ClCompile>
+    <ClCompile Include="Player.cpp">
+      <Filter>player</Filter>
+    </ClCompile>
+    <ClCompile Include="EnemyBullet.cpp">
+      <Filter>enemy</Filter>
+    </ClCompile>
+    <ClCompile Include="Enemy.cpp">
+      <Filter>enemy</Filter>
+    </ClCompile>
+    <ClCompile Include="Title.cpp">
+      <Filter>scene</Filter>
+    </ClCompile>
+    <ClCompile Include="SceneState.cpp">
+      <Filter>scene</Filter>
+    </ClCompile>
+    <ClCompile Include="Rule.cpp">
+      <Filter>scene</Filter>
+    </ClCompile>
+    <ClCompile Include="GameScene.cpp">
+      <Filter>scene</Filter>
+    </ClCompile>
+    <ClCompile Include="GameOver.cpp">
+      <Filter>scene</Filter>
+    </ClCompile>
+    <ClCompile Include="GameClear.cpp">
+      <Filter>scene</Filter>
+    </ClCompile>
+    <ClCompile Include="HpBarBillboard.cpp">
+      <Filter>UI</Filter>
+    </ClCompile>
+    <ClCompile Include="HpBar2D.cpp">
+      <Filter>UI</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -123,47 +135,47 @@
     <ClInclude Include="Collision.h">
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
-    <ClInclude Include="Enemy.h">
-      <Filter>ヘッダー ファイル</Filter>
-    </ClInclude>
-    <ClInclude Include="EnemyBullet.h">
-      <Filter>ヘッダー ファイル</Filter>
-    </ClInclude>
-    <ClInclude Include="GameClear.h">
-      <Filter>ヘッダー ファイル</Filter>
-    </ClInclude>
-    <ClInclude Include="GameOver.h">
-      <Filter>ヘッダー ファイル</Filter>
-    </ClInclude>
-    <ClInclude Include="GameScene.h">
-      <Filter>ヘッダー ファイル</Filter>
-    </ClInclude>
-    <ClInclude Include="HpBar2D.h">
-      <Filter>ヘッダー ファイル</Filter>
-    </ClInclude>
-    <ClInclude Include="HpBarBillboard.h">
-      <Filter>ヘッダー ファイル</Filter>
-    </ClInclude>
     <ClInclude Include="kMath.h">
-      <Filter>ヘッダー ファイル</Filter>
-    </ClInclude>
-    <ClInclude Include="Player.h">
-      <Filter>ヘッダー ファイル</Filter>
-    </ClInclude>
-    <ClInclude Include="PlayerBullet.h">
-      <Filter>ヘッダー ファイル</Filter>
-    </ClInclude>
-    <ClInclude Include="Rule.h">
-      <Filter>ヘッダー ファイル</Filter>
-    </ClInclude>
-    <ClInclude Include="SceneState.h">
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
     <ClInclude Include="SkyDome.h">
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
+    <ClInclude Include="Player.h">
+      <Filter>player</Filter>
+    </ClInclude>
+    <ClInclude Include="PlayerBullet.h">
+      <Filter>player</Filter>
+    </ClInclude>
+    <ClInclude Include="Enemy.h">
+      <Filter>enemy</Filter>
+    </ClInclude>
+    <ClInclude Include="EnemyBullet.h">
+      <Filter>enemy</Filter>
+    </ClInclude>
     <ClInclude Include="Title.h">
-      <Filter>ヘッダー ファイル</Filter>
+      <Filter>scene</Filter>
+    </ClInclude>
+    <ClInclude Include="SceneState.h">
+      <Filter>scene</Filter>
+    </ClInclude>
+    <ClInclude Include="Rule.h">
+      <Filter>scene</Filter>
+    </ClInclude>
+    <ClInclude Include="GameScene.h">
+      <Filter>scene</Filter>
+    </ClInclude>
+    <ClInclude Include="GameOver.h">
+      <Filter>scene</Filter>
+    </ClInclude>
+    <ClInclude Include="GameClear.h">
+      <Filter>scene</Filter>
+    </ClInclude>
+    <ClInclude Include="HpBarBillboard.h">
+      <Filter>UI</Filter>
+    </ClInclude>
+    <ClInclude Include="HpBar2D.h">
+      <Filter>UI</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

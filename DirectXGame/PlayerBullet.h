@@ -13,7 +13,7 @@ public:
 	bool IsDead() const { return isDead_; }
 	bool IsAlive() const { return !isDead_; }
 
-	// ★ ダメージ 20 
+	// ダメージ 20 
 	int GetDamage() const { return 20; }
 
 	const KamataEngine::Vector3& GetPos() const { return wt_.translation_; }
