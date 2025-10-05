@@ -1,6 +1,8 @@
 #include "Player.h"
 #include "kMath.h"
-#include <input/Input.h> 
+#include <cmath>
+#include <input/Input.h>
+
 using namespace KamataEngine;
 
 void Player::Initialize(Model* model) {
@@ -8,12 +10,15 @@ void Player::Initialize(Model* model) {
 	input_ = Input::GetInstance();
 
 	wt_.Initialize();
-	// カメラに位置 z=-10 
 	wt_.translation_ = {0.0f, 0.0f, 0.0f};
 	wt_.UpdateMatrix();
 	wt_.TransferMatrix();
 
 	bullets_.clear();
+
+	// スピード算出初期化
+	prevPos_ = wt_.translation_;
+	speedFrame_ = 0.0f;
 }
 
 void Player::SetPosition(const Vector3& pos) {
@@ -23,7 +28,7 @@ void Player::SetPosition(const Vector3& pos) {
 }
 
 void Player::Update() {
-	
+	// 入力移動
 	if (input_->PushKey(DIK_A))
 		wt_.translation_.x -= moveSpeed_;
 	if (input_->PushKey(DIK_D))
@@ -33,24 +38,27 @@ void Player::Update() {
 	if (input_->PushKey(DIK_S))
 		wt_.translation_.y -= moveSpeed_;
 
-	// 発射
+	// 発射（Space / 左クリック）
 	const bool trig = input_->TriggerKey(DIK_SPACE) || input_->IsTriggerMouse(0);
 	if (trig) {
-		// 自機*Z軸に発射
-		KamataEngine::Vector3 spawn = wt_.translation_;
-		spawn.z += 0.6f; 
-
-		// Z軸方向へ +
-		KamataEngine::Vector3 vel = {0.0f, 0.0f, bulletSpeed_};
-
+		Vector3 spawn = wt_.translation_;
+		spawn.z += 0.6f; // Z正方向
+		Vector3 vel = {0.0f, 0.0f, bulletSpeed_};
 		auto& b = bullets_.emplace_back();
-		b.Initialize(spawn, vel); }
+		b.Initialize(spawn, vel);
+	}
 
-
-	//弾の更新＆寿命で削除
+	// 弾更新＆寿命削除
 	for (auto& b : bullets_)
 		b.Update();
 	bullets_.remove_if([](const PlayerBullet& b) { return b.IsDead(); });
+
+	// 今フレームの移動量（演出用）
+	{
+		const Vector3 d = {wt_.translation_.x - prevPos_.x, wt_.translation_.y - prevPos_.y, wt_.translation_.z - prevPos_.z};
+		speedFrame_ = std::sqrt(d.x * d.x + d.y * d.y + d.z * d.z);
+		prevPos_ = wt_.translation_;
+	}
 
 	// 行列更新
 	wt_.matWorld_ = MakeAffineMatrix(wt_.scale_, wt_.rotation_, wt_.translation_);
