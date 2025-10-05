@@ -20,7 +20,7 @@ public:
 	const KamataEngine::Vector3& GetPosition() const { return wt_.translation_; }
 	float GetRadius() const { return radius_; }
 
-	// 演出用：今フレームの移動量（長さ）
+	// 今フレームの移動量
 	float GetSpeed() const { return speedFrame_; }
 
 	// HP
@@ -40,7 +40,7 @@ private:
 	std::list<PlayerBullet> bullets_;
 	float bulletSpeed_ = 0.8f; // +Z
 
-	// 当たり判定（球）
+	// 当たり判定
 	float radius_ = 1.0f;
 
 	// HP
@@ -48,5 +48,10 @@ private:
 
 	// スピード算出
 	KamataEngine::Vector3 prevPos_{0, 0, 0};
-	float speedFrame_ = 0.0f; // 今フレームの|Δpos|
+	float speedFrame_ = 0.0f; // 今フレーム
+
+	//A/D で傾ける
+	float rollRad_ = 0.0f;                        // 現在のZ回転
+	const float rollMaxRad_ = 3.14159265f / 4.0f; // 45°
+	const float rollLerp_ = 0.2f;                 // 追従レート
 };
