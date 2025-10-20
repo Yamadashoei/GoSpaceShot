@@ -10,13 +10,13 @@ public:
 	void SetPosition(const KamataEngine::Vector3& pos);
 	void SetMoveSpeed(float s) { moveSpeed_ = s; }
 
+	// 位置・判定
+
 	void Update();                        // 移動＆弾更新＆発射
 	void Draw(KamataEngine::Camera& cam); // 自機と弾の描画
 
 	// 弾
 	std::list<PlayerBullet>& GetBullets() { return bullets_; }
-
-	// 位置・判定
 	const KamataEngine::Vector3& GetPosition() const { return wt_.translation_; }
 	float GetRadius() const { return radius_; }
 
