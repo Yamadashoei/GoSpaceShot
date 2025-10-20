@@ -8,7 +8,7 @@
 #include <base/DirectXCommon.h>
 #include <base/WinApp.h>
 
-#include "kMath.h" // Make* / Transform / WorldToScreen
+#include "kMath.h"
 #include <algorithm>
 #include <cmath>
 #include <cstdlib>
@@ -18,8 +18,7 @@ using namespace KamataEngine;
 static inline float Clamp01(float v) { return (v < 0.f) ? 0.f : (v > 1.f) ? 1.f : v; }
 static inline float DegToRad(float d) { return d * 3.1415926535f / 180.0f; }
 
-
-// 左手座標系
+// 左手座標系の透視投影
 static Matrix4x4 MakePerspectiveFovLH(float fovY, float aspect, float zn, float zf) {
 	Matrix4x4 m{};
 	const float f = 1.0f / std::tan(fovY * 0.5f);
@@ -31,13 +30,12 @@ static Matrix4x4 MakePerspectiveFovLH(float fovY, float aspect, float zn, float 
 	return m;
 }
 
-// カメラから View 
+// カメラ TR → View
 static Matrix4x4 MakeViewFromCameraTR(const Camera& cam) {
 	Matrix4x4 Tinv = MakeTranslateMatrix(Vector3{-cam.translation_.x, -cam.translation_.y, -cam.translation_.z});
 	Matrix4x4 Rinv = Multiply(MakeRotateZMatrix(-cam.rotation_.z), Multiply(MakeRotateYMatrix(-cam.rotation_.y), MakeRotateXMatrix(-cam.rotation_.x)));
 	return Multiply(Tinv, Rinv);
 }
-
 
 bool GameScene::SphereHit(const Vector3& a, float ra, const Vector3& b, float rb) {
 	const float dx = a.x - b.x;
@@ -48,7 +46,6 @@ bool GameScene::SphereHit(const Vector3& a, float ra, const Vector3& b, float rb
 }
 
 GameScene::~GameScene() {
-	
 	delete player_;
 	delete enemy_;
 	delete modelPlayer_;
@@ -67,6 +64,8 @@ void GameScene::Initialize() {
 	camera_.rotation_ = {0.0f, 0.0f, 0.0f};
 	camera_.UpdateMatrix();
 	cameraZNow_ = cameraBaseZ_;
+	worldTravelZ_ = 0.0f;
+	lastScrollDz_ = 0.0f;
 
 	// モデル
 	modelPlayer_ = Model::CreateFromOBJ("player");
@@ -80,28 +79,30 @@ void GameScene::Initialize() {
 	enemy_ = new Enemy();
 	enemy_->Initialize(modelEnemy_, {0.0f, 0.0f, 40.0f});
 
-	// 遷移フラグ初期化
+	// 遷移
 	next_ = false;
 	nextScene_ = SceneState::Title;
 
-	// テクスチャ/HPバー
+	// UI
 	whiteTex_ = TextureManager::Load("./Resources/white1x1.png");
-	playerHpUI_.Initialize(whiteTex_, {30.0f, 30.0f}, {220.0f, 18.0f});   // 画面左上
-	enemyHpUI_.Initialize(whiteTex_, {100.0f, 8.0f}, {0.0f, 3.0f, 0.0f}); // 敵頭上
+	playerHpUI_.Initialize(whiteTex_, {30.0f, 30.0f}, {220.0f, 18.0f});
+	enemyHpUI_.Initialize(whiteTex_, {100.0f, 8.0f}, {0.0f, 3.0f, 0.0f});
 
 	// スカイドーム
 	skydome_ = new SkyDome();
 	skydome_->Initialize();
 
-	// 演出初期化
+	// 演出
 	speedLines_.clear();
 	lineEmitAccum_ = 0.0f;
 }
 
 void GameScene::Update() {
+	const float dt = 1.0f / 60.0f;
+
 	// 更新
 	player_->Update();
-	enemy_->Update(player_->GetPosition(), 1.0f / 60.0f);
+	enemy_->Update(player_->GetPosition(), dt);
 
 	// 衝突
 	HandleCollisions();
@@ -116,29 +117,38 @@ void GameScene::Update() {
 		}
 	}
 
-	// プレイヤーHP割合
+	// HPバー
 	playerHpUI_.SetRatio(static_cast<float>(player_->GetHP()) / player_->GetMaxHP());
-
-	// 敵HPバー
 	enemyHpUI_.Update(enemy_->GetPosition(), camera_, enemy_->GetHP(), enemy_->GetMaxHP(), WinApp::kWindowWidth, WinApp::kWindowHeight);
 
 	// スカイドーム
 	skydome_->Update();
 
-	// 疾走感
+	// 疾走
 	float intensity = Clamp01(player_->GetSpeed() / maxSpeedFX_);
 
-	// Zを後ろに引く
+	// Z+へ前進（プレイヤー/敵/弾）
 	{
-		float targetZ = cameraBaseZ_ - dashPullback_ * intensity; 
-		cameraZNow_ = cameraZNow_ * 0.88f + targetZ * 0.12f;      // 簡易補間
-		camera_.translation_.z = cameraZNow_;
-		camera_.UpdateMatrix();
+		float railSpeed = railBaseSpeed_ + railBoostMax_ * intensity; // [wu/s]
+		lastScrollDz_ = railSpeed * dt;
+		worldTravelZ_ += lastScrollDz_;
+		ApplyForwardMotion_(lastScrollDz_);
 	}
 
-	// Z軸方向ライン
+	// カメラ
+	{
+		float targetZ = (cameraBaseZ_ + worldTravelZ_) - dashPullback_ * intensity;
+		cameraZNow_ = cameraZNow_ * 0.88f + targetZ * 0.12f;
+		camera_.translation_.z = cameraZNow_;
+		camera_.UpdateMatrix();
+
+		// 
+		skydome_->SetCenter(camera_.translation_);
+	}
+
+	// スピードライン
 	EmitSpeedLines_(intensity);
-	UpdateSpeedLines_(1.0f / 60.0f);
+	UpdateSpeedLines_(dt);
 }
 
 void GameScene::Draw() {
@@ -208,10 +218,32 @@ void GameScene::HandleCollisions() {
 	}
 }
 
+// 全体前進Z+
+void GameScene::ApplyForwardMotion_(float dz) {
+	// Player
+	{
+		Vector3 p = player_->GetPosition();
+		p.z += dz;
+		player_->SetPosition(p);
+	}
+	// Enemy
+	{
+		Vector3 e = enemy_->GetPosition();
+		e.z += dz;
+		enemy_->SetPosition(e);
+	}
+	// Bullets
+	for (auto& b : player_->GetBullets()) {
+		b.AddScrollZ(dz);
+	}
+	for (auto& b : enemy_->GetBullets()) {
+		b.AddScrollZ(dz);
+	}
+}
 
-//Z軸方向
+// スピードライン生成
 void GameScene::EmitSpeedLines_(float intensity) {
-	const float rate = 20.0f * intensity; 
+	const float rate = 20.0f * intensity;
 	lineEmitAccum_ += rate * (1.0f / 60.0f);
 
 	while (lineEmitAccum_ >= 1.0f) {
@@ -219,53 +251,44 @@ void GameScene::EmitSpeedLines_(float intensity) {
 
 		SpeedLine L;
 
-		// スプライト
 		Vector2 pos2D(0.0f, 0.0f);
 		Vector4 col(1.0f, 1.0f, 1.0f, 0.9f);
 		L.spr = Sprite::Create(whiteTex_, pos2D, col);
 		L.spr->SetAnchorPoint({0.5f, 0.0f});
 
-		// ワールド位置
 		const Vector3 p = player_->GetPosition();
-		float offX = ((std::rand() % 1000) / 1000.0f - 0.5f) * 4.0f; // ±2.0
-		float offY = ((std::rand() % 1000) / 1000.0f - 0.5f) * 2.0f; // ±1.0
-		float offZ = 6.0f + (std::rand() % 1000) / 1000.0f * 10.0f;  // +6～+16
+		float offX = ((std::rand() % 1000) / 1000.0f - 0.5f) * 4.0f;
+		float offY = ((std::rand() % 1000) / 1000.0f - 0.5f) * 2.0f;
+		float offZ = 6.0f + (std::rand() % 1000) / 1000.0f * 10.0f;
 		L.worldPos = {p.x + offX, p.y + offY, p.z + offZ};
 
-		// 長さ＆太さ
-		L.worldLen = 2.5f + (std::rand() % 1000) / 1000.0f * 3.0f;    // 2.5～5.5
-		L.thicknessPx = 2.0f + (std::rand() % 1000) / 1000.0f * 3.0f; // 2～5px
-
-		// 手前に流す速度
-		L.velZ = -(6.0f + 24.0f * intensity); // 6～30
-
-		// 寿命
-		L.lifeInit = L.life = 0.35f + 0.35f * intensity; // 0.35～0.7s
+		L.worldLen = 2.5f + (std::rand() % 1000) / 1000.0f * 3.0f;
+		L.thicknessPx = 2.0f + (std::rand() % 1000) / 1000.0f * 3.0f;
+		L.velZ = -(6.0f + 24.0f * intensity); // カメラ方向へ
+		L.lifeInit = L.life = 0.35f + 0.35f * intensity;
 
 		speedLines_.push_back(L);
 	}
 }
 
+// スピードライン更新
 void GameScene::UpdateSpeedLines_(float dt) {
 	const int SW = WinApp::kWindowWidth;
 	const int SH = WinApp::kWindowHeight;
 
 	const Matrix4x4 view = MakeViewFromCameraTR(camera_);
-
-	// FOV 60°
 	const float fovY = DegToRad(60.0f);
 	const float aspect = static_cast<float>(SW) / static_cast<float>(SH);
 	const Matrix4x4 proj = MakePerspectiveFovLH(fovY, aspect, 0.1f, 1000.0f);
-
-
 	const Matrix4x4 viewProj = Multiply(view, proj);
 
 	for (auto it = speedLines_.begin(); it != speedLines_.end();) {
-		// 進行
 		it->life -= dt;
 		it->worldPos.z += it->velZ * dt;
 
-		// カメラの手前まで来たら消す
+		
+		it->worldPos.z -= lastScrollDz_;
+
 		if (it->life <= 0.0f || it->worldPos.z < camera_.translation_.z + 0.5f) {
 			it = speedLines_.erase(it);
 			continue;
@@ -275,7 +298,7 @@ void GameScene::UpdateSpeedLines_(float dt) {
 		Vector3 B = it->worldPos;
 		B.z -= it->worldLen;
 
-		// カメラ
+		// カリング
 		{
 			Vector4 clipA = Transform(Vector4{A.x, A.y, A.z, 1.0f}, viewProj);
 			Vector4 clipB = Transform(Vector4{B.x, B.y, B.z, 1.0f}, viewProj);
@@ -285,11 +308,9 @@ void GameScene::UpdateSpeedLines_(float dt) {
 			}
 		}
 
-		// World → Screen
 		Vector2 As = WorldToScreen(A, view, proj, SW, SH);
 		Vector2 Bs = WorldToScreen(B, view, proj, SW, SH);
 
-		// 画面上の長さと角度
 		float dx = Bs.x - As.x;
 		float dy = Bs.y - As.y;
 		float lenPx = std::sqrt(dx * dx + dy * dy);
@@ -297,9 +318,8 @@ void GameScene::UpdateSpeedLines_(float dt) {
 			++it;
 			continue;
 		}
-		float angle = std::atan2(dy, dx);
 
-		// スプライト反映
+		float angle = std::atan2(dy, dx);
 		it->spr->SetPosition(As);
 		it->spr->SetSize({it->thicknessPx, lenPx});
 		it->spr->SetRotation(angle);
@@ -331,7 +351,6 @@ void GameScene::DrawVignette_(float intensity) {
 	auto drawBand = [&](float x, float y, float w, float h) {
 		Vector2 pos(0.0f, 0.0f);
 		Vector4 col(0.0f, 0.0f, 0.0f, alpha);
-
 		Sprite* s = Sprite::Create(whiteTex_, pos, col);
 		s->SetAnchorPoint({0.0f, 0.0f});
 		s->SetPosition({x, y});
@@ -339,7 +358,6 @@ void GameScene::DrawVignette_(float intensity) {
 		s->Draw();
 	};
 
-	// 上・下・左・右
 	drawBand(0.0f, 0.0f, W, thick);
 	drawBand(0.0f, H - thick, W, thick);
 	drawBand(0.0f, 0.0f, thick, H);

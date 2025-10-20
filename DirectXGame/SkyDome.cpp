@@ -1,20 +1,28 @@
-#include "Skydome.h"
-#include "cassert"
+#include "SkyDome.h"
+#include <cassert>
 
 using namespace KamataEngine;
 
 SkyDome::~SkyDome() { delete model_; }
 
 void SkyDome::Initialize() {
-	// 引数で受け取ったデータをメンバ変数
 	model_ = Model::CreateFromOBJ("skydome");
-	// ワールド変換の初期化
 	worldTransform_.Initialize();
+	worldTransform_.UpdateMatrix();
+	worldTransform_.TransferMatrix();
 }
 
 void SkyDome::Update() {
-	
-	worldTransform_.UpdateMatrix();
+	// 位置は GameScene 側から SetCenter で更新する
 }
 
-void SkyDome::Draw(Camera& viewProjection) { model_->Draw(worldTransform_, viewProjection); }
+void SkyDome::SetCenter(const Vector3& p) {
+	worldTransform_.translation_ = p;
+	worldTransform_.UpdateMatrix();
+	worldTransform_.TransferMatrix();
+}
+
+void SkyDome::Draw(Camera& viewProjection) {
+	if (model_)
+		model_->Draw(worldTransform_, viewProjection);
+}
