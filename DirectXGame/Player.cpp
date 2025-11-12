@@ -50,7 +50,7 @@ void Player::Update() {
 		targetRoll = +rollMaxRad_; // 左で左
 	else if (right && !left)
 		targetRoll = -rollMaxRad_; // 右で右
-	// スムーズに追従
+	// 追従
 	rollRad_ += (targetRoll - rollRad_) * rollLerp_;
 	wt_.rotation_.z = rollRad_;
 

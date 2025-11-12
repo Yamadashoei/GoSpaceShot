@@ -9,7 +9,7 @@ public:
 	void Update();
 	void Draw(KamataEngine::Camera& viewProjection);
 
-	// ★ カメラ追従用：中心位置をセット（毎フレーム呼ぶ）
+	//中心位置をセット
 	void SetCenter(const KamataEngine::Vector3& p);
 	void FollowCamera(const KamataEngine::Camera& cam) { SetCenter(cam.translation_); }
 

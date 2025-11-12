@@ -13,7 +13,7 @@ void SkyDome::Initialize() {
 }
 
 void SkyDome::Update() {
-	// 位置は GameScene 側から SetCenter で更新する
+	
 }
 
 void SkyDome::SetCenter(const Vector3& p) {

@@ -79,6 +79,9 @@ void GameScene::Initialize() {
 	enemy_ = new Enemy();
 	enemy_->Initialize(modelEnemy_, {0.0f, 0.0f, 40.0f});
 
+	// 敵視覚Zの初期化
+	enemyZNowVisual_ = enemy_->GetPosition().z;
+
 	// 遷移
 	next_ = false;
 	nextScene_ = SceneState::Title;
@@ -92,7 +95,25 @@ void GameScene::Initialize() {
 	skydome_ = new SkyDome();
 	skydome_->Initialize();
 
-	// 演出
+	
+	const float kWideMarginPx = 500.0f; // 画面外にも広く撒く余白
+
+	starFar_.Initialize(
+	    whiteTex_, /*count*/ 220, /*spreadX*/ 18.0f, /*spreadY*/ 10.0f,
+	    /*zNear*/ 18.0f, /*zFar*/ 300.0f);
+	starFar_.ResetInView(
+	    camera_, WinApp::kWindowWidth, WinApp::kWindowHeight,
+	    /*zNear*/ 18.0f, /*zFar*/ 300.0f, /*margin*/ kWideMarginPx);
+
+	// 近層
+	starNear_.Initialize(
+	    whiteTex_, /*count*/ 140, /*spreadX*/ 10.0f, /*spreadY*/ 6.0f,
+	    /*zNear*/ 10.0f, /*zFar*/ 140.0f);
+	starNear_.ResetInView(
+	    camera_, WinApp::kWindowWidth, WinApp::kWindowHeight,
+	    /*zNear*/ 10.0f, /*zFar*/ 140.0f, /*margin*/ kWideMarginPx);
+
+	// スピードライン
 	speedLines_.clear();
 	lineEmitAccum_ = 0.0f;
 }
@@ -124,31 +145,52 @@ void GameScene::Update() {
 	// スカイドーム
 	skydome_->Update();
 
-	// 疾走
+	// 疾走（0～1）
 	float intensity = Clamp01(player_->GetSpeed() / maxSpeedFX_);
 
-	// Z+へ前進（プレイヤー/敵/弾）
+	//Z+へ前進
 	{
-		float railSpeed = railBaseSpeed_ + railBoostMax_ * intensity; // [wu/s]
+		float railSpeed = railBaseSpeed_ + railBoostMax_ * intensity;
 		lastScrollDz_ = railSpeed * dt;
 		worldTravelZ_ += lastScrollDz_;
 		ApplyForwardMotion_(lastScrollDz_);
 	}
 
-	// カメラ
+	// 疾走時は少し押し戻される
+	{
+		Vector3 p = player_->GetPosition();
+		Vector3 e = enemy_->GetPosition();
+
+		float targetZ = p.z + enemyDesiredLeadZ_ - enemyDragOnBoost_ * intensity;
+		enemyZNowVisual_ = enemyZNowVisual_ * (1.0f - enemyCohesionLerp_) + targetZ * enemyCohesionLerp_;
+
+		e.z = enemyZNowVisual_;
+		enemy_->SetPosition(e);
+	}
+
+	// カメラ＋スカイドーム追従
 	{
 		float targetZ = (cameraBaseZ_ + worldTravelZ_) - dashPullback_ * intensity;
 		cameraZNow_ = cameraZNow_ * 0.88f + targetZ * 0.12f;
 		camera_.translation_.z = cameraZNow_;
 		camera_.UpdateMatrix();
 
-		// 
+		// 空から抜けないようにスカイドームをカメラへ追従
 		skydome_->SetCenter(camera_.translation_);
 	}
 
-	// スピードライン
-	EmitSpeedLines_(intensity);
-	UpdateSpeedLines_(dt);
+	// 星の流れ
+	starFar_.Update(camera_, dt, lastScrollDz_, player_->GetPosition(), intensity);
+	starNear_.Update(camera_, dt, lastScrollDz_, player_->GetPosition(), intensity);
+
+	// スピードライン（OFF時は生成、更新しない）
+	if (enableSpeedLines_) {
+		EmitSpeedLines_(intensity);
+		UpdateSpeedLines_(dt);
+	} else {
+		if (!speedLines_.empty())
+			speedLines_.clear();
+	}
 }
 
 void GameScene::Draw() {
@@ -164,7 +206,13 @@ void GameScene::Draw() {
 	// 2D
 	Sprite::PreDraw(cmd);
 	{
-		DrawSpeedLines_();
+		// 星
+		starFar_.Draw();
+		starNear_.Draw();
+
+		if (enableSpeedLines_) {
+			DrawSpeedLines_();
+		}
 
 		float intensity = Clamp01(player_->GetSpeed() / maxSpeedFX_);
 		DrawVignette_(intensity);
@@ -286,7 +334,7 @@ void GameScene::UpdateSpeedLines_(float dt) {
 		it->life -= dt;
 		it->worldPos.z += it->velZ * dt;
 
-		
+		// 全体前進量を相殺し、相対的に強く手前へ
 		it->worldPos.z -= lastScrollDz_;
 
 		if (it->life <= 0.0f || it->worldPos.z < camera_.translation_.z + 0.5f) {

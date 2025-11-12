@@ -81,6 +81,9 @@
     <ClCompile Include="HpBar2D.cpp">
       <Filter>UI</Filter>
     </ClCompile>
+    <ClCompile Include="StarField.cpp">
+      <Filter>ソース ファイル</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <FxCompile Include="Resources\shaders\SpritePS.hlsl">
@@ -176,6 +179,9 @@
     </ClInclude>
     <ClInclude Include="HpBar2D.h">
       <Filter>UI</Filter>
+    </ClInclude>
+    <ClInclude Include="StarField.h">
+      <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

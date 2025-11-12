@@ -1,6 +1,13 @@
 #include "Enemy.h"
 #include "kMath.h"
+#include <algorithm>
+#include <cmath>
+#include <cstdlib>
+
 using namespace KamataEngine;
+
+static inline float Rand01() { return static_cast<float>(std::rand() % 10000) / 10000.0f; }
+static inline float RandRange(float a, float b) { return a + (b - a) * Rand01(); }
 
 void Enemy::Initialize(Model* model, const Vector3& position) {
 	model_ = model;
@@ -13,10 +20,18 @@ void Enemy::Initialize(Model* model, const Vector3& position) {
 	shotTimerSec_ = 0.0f;
 	hp_ = 300;
 
-	
 	moveLeft_ = -12.0f;
 	moveRight_ = +12.0f;
-	moveSpeedX_ = +6.0f; 
+	moveSpeedX_ = +6.0f;
+
+	// Z初期化
+	zMode_ = 0;
+	zModeDuration_ = RandRange(0.8f, 1.6f);
+	zModeTimer_ = zModeDuration_;
+
+	// Y初期化
+	yTarget_ = wt_.translation_.y;
+	yRetargetTimer_ = RandRange(yRetargetIntervalMin_, yRetargetIntervalMax_);
 }
 
 void Enemy::SetPosition(const Vector3& pos) {
@@ -30,32 +45,74 @@ void Enemy::SetMoveBounds(float left, float right) {
 		std::swap(left, right);
 	moveLeft_ = left;
 	moveRight_ = right;
-	// 範囲外なら内側に寄せる
 	if (wt_.translation_.x < moveLeft_)
 		wt_.translation_.x = moveLeft_;
 	if (wt_.translation_.x > moveRight_)
 		wt_.translation_.x = moveRight_;
 }
 
-void Enemy::SetSpeed(float unitsPerSec) {
-	
-	moveSpeedX_ = unitsPerSec;
-}
+void Enemy::SetSpeed(float unitsPerSec) { moveSpeedX_ = unitsPerSec; }
 
 void Enemy::Update(const Vector3& playerPos, float deltaSec) {
-	//左右往復移動
-	wt_.translation_.x += moveSpeedX_ * deltaSec; // 秒間速度×経過秒
 
-	// 端で反転
+	wt_.translation_.x += moveSpeedX_ * deltaSec;
 	if (wt_.translation_.x <= moveLeft_) {
 		wt_.translation_.x = moveLeft_;
-		moveSpeedX_ = std::abs(moveSpeedX_); // 右へ
+		moveSpeedX_ = std::abs(moveSpeedX_);
 	} else if (wt_.translation_.x >= moveRight_) {
 		wt_.translation_.x = moveRight_;
-		moveSpeedX_ = -std::abs(moveSpeedX_); // 左へ
+		moveSpeedX_ = -std::abs(moveSpeedX_);
 	}
 
-	// 5秒ごとにプレイヤー方向へ発射
+
+	zModeTimer_ -= deltaSec;
+	if (zModeTimer_ <= 0.0f) {
+		float r = Rand01();
+		if (r < 0.45f)
+			zMode_ = 0; 
+		else if (r < 0.75f)
+			zMode_ = 1; 
+		else
+			zMode_ = 2; 
+		if (zMode_ == 0)
+			zModeDuration_ = RandRange(0.8f, 1.6f);
+		else if (zMode_ == 1)
+			zModeDuration_ = RandRange(0.6f, 1.2f);
+		else
+			zModeDuration_ = RandRange(0.7f, 1.3f);
+		zModeTimer_ = zModeDuration_;
+	}
+
+	float gap = wt_.translation_.z - playerPos.z;
+	float targetGap = desiredLeadZ_;
+	if (zMode_ == 1) {
+		targetGap = desiredLeadZ_;
+	} else if (zMode_ == 2) {
+		targetGap = desiredLeadZ_ + RandRange(retreatExtraMin_, retreatExtraMax_); 
+	} else {
+		targetGap = desiredLeadZ_ + std::sin((wt_.translation_.x + wt_.translation_.y) * 0.25f) * 2.0f;
+	}
+	float t = std::clamp(zCohesionRate_ * deltaSec, 0.0f, 1.0f);
+	gap += (targetGap - gap) * t;
+	wt_.translation_.z = playerPos.z + gap;
+
+	// ランダム
+	yRetargetTimer_ -= deltaSec;
+	if (yRetargetTimer_ <= 0.0f) {
+		yTarget_ = RandRange(yRangeMin_, yRangeMax_);
+		yRetargetTimer_ = RandRange(yRetargetIntervalMin_, yRetargetIntervalMax_);
+	}
+	{
+		float dy = yTarget_ - wt_.translation_.y;
+		float step = yLerpRate_ * deltaSec;
+		if (std::fabs(dy) <= step) {
+			wt_.translation_.y = yTarget_;
+		} else {
+			wt_.translation_.y += (dy > 0.0f ? step : -step);
+		}
+	}
+
+	//プレイヤー狙い
 	shotTimerSec_ += deltaSec;
 	if (shotTimerSec_ >= shotIntervalSec_) {
 		shotTimerSec_ = 0.0f;

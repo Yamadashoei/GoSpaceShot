@@ -169,6 +169,7 @@
     <ClCompile Include="Rule.cpp" />
     <ClCompile Include="SceneState.cpp" />
     <ClCompile Include="SkyDome.cpp" />
+    <ClCompile Include="StarField.cpp" />
     <ClCompile Include="Title.cpp" />
     <ClCompile Include="WorldTransformEx.cpp" />
   </ItemGroup>
@@ -284,6 +285,7 @@
     <ClInclude Include="Rule.h" />
     <ClInclude Include="SceneState.h" />
     <ClInclude Include="SkyDome.h" />
+    <ClInclude Include="StarField.h" />
     <ClInclude Include="Title.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
