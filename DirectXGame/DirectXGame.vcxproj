@@ -160,6 +160,7 @@
     <ClCompile Include="GameClear.cpp" />
     <ClCompile Include="GameOver.cpp" />
     <ClCompile Include="GameScene.cpp" />
+    <ClCompile Include="HitFlash.cpp" />
     <ClCompile Include="HpBar2D.cpp" />
     <ClCompile Include="HpBarBillboard.cpp" />
     <ClCompile Include="kMath.cpp" />
@@ -277,6 +278,7 @@
     <ClInclude Include="GameClear.h" />
     <ClInclude Include="GameOver.h" />
     <ClInclude Include="GameScene.h" />
+    <ClInclude Include="HitFlash.h" />
     <ClInclude Include="HpBar2D.h" />
     <ClInclude Include="HpBarBillboard.h" />
     <ClInclude Include="kMath.h" />

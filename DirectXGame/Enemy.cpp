@@ -24,12 +24,12 @@ void Enemy::Initialize(Model* model, const Vector3& position) {
 	moveRight_ = +12.0f;
 	moveSpeedX_ = +6.0f;
 
-	// Z初期化
+	// Z 初期
 	zMode_ = 0;
 	zModeDuration_ = RandRange(0.8f, 1.6f);
 	zModeTimer_ = zModeDuration_;
 
-	// Y初期化
+	// Y 初期
 	yTarget_ = wt_.translation_.y;
 	yRetargetTimer_ = RandRange(yRetargetIntervalMin_, yRetargetIntervalMax_);
 }
@@ -45,58 +45,41 @@ void Enemy::SetMoveBounds(float left, float right) {
 		std::swap(left, right);
 	moveLeft_ = left;
 	moveRight_ = right;
-	if (wt_.translation_.x < moveLeft_)
-		wt_.translation_.x = moveLeft_;
-	if (wt_.translation_.x > moveRight_)
-		wt_.translation_.x = moveRight_;
+	wt_.translation_.x = std::clamp(wt_.translation_.x, moveLeft_, moveRight_);
 }
 
 void Enemy::SetSpeed(float unitsPerSec) { moveSpeedX_ = unitsPerSec; }
 
 void Enemy::Update(const Vector3& playerPos, float deltaSec) {
-
+	// X: 往復
 	wt_.translation_.x += moveSpeedX_ * deltaSec;
 	if (wt_.translation_.x <= moveLeft_) {
 		wt_.translation_.x = moveLeft_;
 		moveSpeedX_ = std::abs(moveSpeedX_);
-	} else if (wt_.translation_.x >= moveRight_) {
+	}
+	if (wt_.translation_.x >= moveRight_) {
 		wt_.translation_.x = moveRight_;
 		moveSpeedX_ = -std::abs(moveSpeedX_);
 	}
 
-
+	// Z: モード切替
 	zModeTimer_ -= deltaSec;
 	if (zModeTimer_ <= 0.0f) {
 		float r = Rand01();
-		if (r < 0.45f)
-			zMode_ = 0; 
-		else if (r < 0.75f)
-			zMode_ = 1; 
-		else
-			zMode_ = 2; 
-		if (zMode_ == 0)
-			zModeDuration_ = RandRange(0.8f, 1.6f);
-		else if (zMode_ == 1)
-			zModeDuration_ = RandRange(0.6f, 1.2f);
-		else
-			zModeDuration_ = RandRange(0.7f, 1.3f);
+		zMode_ = (r < 0.45f) ? 0 : (r < 0.75f) ? 1 : 2;
+		zModeDuration_ = (zMode_ == 0) ? RandRange(0.8f, 1.6f) : (zMode_ == 1) ? RandRange(0.6f, 1.2f) : RandRange(0.7f, 1.3f);
 		zModeTimer_ = zModeDuration_;
 	}
 
 	float gap = wt_.translation_.z - playerPos.z;
-	float targetGap = desiredLeadZ_;
-	if (zMode_ == 1) {
-		targetGap = desiredLeadZ_;
-	} else if (zMode_ == 2) {
-		targetGap = desiredLeadZ_ + RandRange(retreatExtraMin_, retreatExtraMax_); 
-	} else {
-		targetGap = desiredLeadZ_ + std::sin((wt_.translation_.x + wt_.translation_.y) * 0.25f) * 2.0f;
-	}
+	float targetGap = (zMode_ == 2)   ? (desiredLeadZ_ + RandRange(retreatExtraMin_, retreatExtraMax_))
+	                  : (zMode_ == 1) ? desiredLeadZ_
+	                                  : desiredLeadZ_ + std::sin((wt_.translation_.x + wt_.translation_.y) * 0.25f) * 2.0f;
 	float t = std::clamp(zCohesionRate_ * deltaSec, 0.0f, 1.0f);
 	gap += (targetGap - gap) * t;
 	wt_.translation_.z = playerPos.z + gap;
 
-	// ランダム
+	// Y: ランダム追従
 	yRetargetTimer_ -= deltaSec;
 	if (yRetargetTimer_ <= 0.0f) {
 		yTarget_ = RandRange(yRangeMin_, yRangeMax_);
@@ -105,38 +88,32 @@ void Enemy::Update(const Vector3& playerPos, float deltaSec) {
 	{
 		float dy = yTarget_ - wt_.translation_.y;
 		float step = yLerpRate_ * deltaSec;
-		if (std::fabs(dy) <= step) {
+		if (std::fabs(dy) <= step)
 			wt_.translation_.y = yTarget_;
-		} else {
+		else
 			wt_.translation_.y += (dy > 0.0f ? step : -step);
-		}
 	}
 
-	//プレイヤー狙い
+	// 発射：プレイヤー狙い
 	shotTimerSec_ += deltaSec;
 	if (shotTimerSec_ >= shotIntervalSec_) {
 		shotTimerSec_ = 0.0f;
-
 		Vector3 dir = Subtract(playerPos, wt_.translation_);
-		float len2 = dir.x * dir.x + dir.y * dir.y + dir.z * dir.z;
-		if (len2 < 1e-6f)
-			dir = {0.0f, 0.0f, -1.0f};
+		if (float len2 = dir.x * dir.x + dir.y * dir.y + dir.z * dir.z; len2 < 1e-6f)
+			dir = {0, 0, -1};
 		else
 			dir = Normalize(dir);
 
 		Vector3 spawn = wt_.translation_ + dir * 0.6f;
 		Vector3 vel = dir * bulletSpeed_;
-
 		auto& b = bullets_.emplace_back();
 		b.Initialize(model_, spawn, vel);
 	}
 
-	// 弾更新 & 寿命削除
 	for (auto& b : bullets_)
 		b.Update();
 	bullets_.remove_if([](const EnemyBullet& b) { return b.IsDead(); });
 
-	// 行列更新
 	wt_.matWorld_ = MakeAffineMatrix(wt_.scale_, wt_.rotation_, wt_.translation_);
 	wt_.TransferMatrix();
 }
