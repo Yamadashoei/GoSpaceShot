@@ -18,7 +18,7 @@ using namespace KamataEngine;
 static inline float Clamp01(float v) { return (v < 0.f) ? 0.f : (v > 1.f) ? 1.f : v; }
 static inline float DegToRad(float d) { return d * 3.1415926535f / 180.0f; }
 
-// 透視投影
+// 左手座標系の透視投影
 static Matrix4x4 MakePerspectiveFovLH(float fovY, float aspect, float zn, float zf) {
 	Matrix4x4 m{};
 	const float f = 1.0f / std::tan(fovY * 0.5f);
@@ -29,7 +29,8 @@ static Matrix4x4 MakePerspectiveFovLH(float fovY, float aspect, float zn, float 
 	m.m[3][2] = (-zn * zf) / (zf - zn);
 	return m;
 }
-// View
+
+// カメラ 
 static Matrix4x4 MakeViewFromCameraTR(const Camera& cam) {
 	Matrix4x4 Tinv = MakeTranslateMatrix(Vector3{-cam.translation_.x, -cam.translation_.y, -cam.translation_.z});
 	Matrix4x4 Rinv = Multiply(MakeRotateZMatrix(-cam.rotation_.z), Multiply(MakeRotateYMatrix(-cam.rotation_.y), MakeRotateXMatrix(-cam.rotation_.x)));
@@ -66,6 +67,13 @@ void GameScene::Initialize() {
 	worldTravelZ_ = 0.0f;
 	lastScrollDz_ = 0.0f;
 
+	// シェイク初期化
+	shakeTimer_ = 0.0f;
+	shakeDuration_ = 0.0f;
+	shakeAmp_ = 0.0f;
+	shakeFreq_ = 22.0f;
+	shakeSeed_ = 0u;
+
 	// モデル
 	modelPlayer_ = Model::CreateFromOBJ("player");
 	modelEnemy_ = Model::CreateFromOBJ("enemy");
@@ -75,10 +83,13 @@ void GameScene::Initialize() {
 	player_->Initialize(modelPlayer_);
 	player_->SetPosition({0.0f, 0.0f, 20.0f});
 
+	// 最大HP=5、現在HP=5
+	player_->SetMaxHP(5,true);
+
 	enemy_ = new Enemy();
 	enemy_->Initialize(modelEnemy_, {0.0f, 0.0f, 40.0f});
 
-	// 敵視覚Z初期化
+	// 敵視覚Zの初期化
 	enemyZNowVisual_ = enemy_->GetPosition().z;
 
 	// 遷移
@@ -94,20 +105,16 @@ void GameScene::Initialize() {
 	skydome_ = new SkyDome();
 	skydome_->Initialize();
 
-	// 星（広い余白）
+	//星
 	const float kWideMarginPx = 500.0f;
 	starFar_.Initialize(whiteTex_, 220, 18.0f, 10.0f, 18.0f, 300.0f);
 	starFar_.ResetInView(camera_, WinApp::kWindowWidth, WinApp::kWindowHeight, 18.0f, 300.0f, kWideMarginPx);
-
 	starNear_.Initialize(whiteTex_, 140, 10.0f, 6.0f, 10.0f, 140.0f);
 	starNear_.ResetInView(camera_, WinApp::kWindowWidth, WinApp::kWindowHeight, 10.0f, 140.0f, kWideMarginPx);
 
 	// スピードライン
 	speedLines_.clear();
 	lineEmitAccum_ = 0.0f;
-
-	// 被弾フラッシュ
-	hitFX_.clear();
 }
 
 void GameScene::Update() {
@@ -148,7 +155,7 @@ void GameScene::Update() {
 		ApplyForwardMotion_(lastScrollDz_);
 	}
 
-	// 敵の見た目Z追従
+	// 疾走時は少し押し戻される
 	{
 		Vector3 p = player_->GetPosition();
 		Vector3 e = enemy_->GetPosition();
@@ -164,26 +171,25 @@ void GameScene::Update() {
 	{
 		float targetZ = (cameraBaseZ_ + worldTravelZ_) - dashPullback_ * intensity;
 		cameraZNow_ = cameraZNow_ * 0.88f + targetZ * 0.12f;
-		camera_.translation_.z = cameraZNow_;
+
+		Vector3 camT = camera_.translation_;
+		camT.z = cameraZNow_;
+
+		// 画面シェイク
+		UpdateShake_(dt, camT);
+
+		camera_.translation_ = camT;
 		camera_.UpdateMatrix();
 
+		// 空から抜けないようにスカイドームをカメラへ追従
 		skydome_->SetCenter(camera_.translation_);
 	}
 
-	// 星
+	// 星の流れ
 	starFar_.Update(camera_, dt, lastScrollDz_, player_->GetPosition(), intensity);
 	starNear_.Update(camera_, dt, lastScrollDz_, player_->GetPosition(), intensity);
 
-	// 被弾フラッシュ更新＆掃除
-	for (auto it = hitFX_.begin(); it != hitFX_.end();) {
-		it->Update(camera_, dt);
-		if (!it->IsAlive())
-			it = hitFX_.erase(it);
-		else
-			++it;
-	}
-
-	// スピードライン（OFF時は生成、更新しない）
+	// スピードライン
 	if (enableSpeedLines_) {
 		EmitSpeedLines_(intensity);
 		UpdateSpeedLines_(dt);
@@ -210,10 +216,6 @@ void GameScene::Draw() {
 		starFar_.Draw();
 		starNear_.Draw();
 
-		// 被弾フラッシュ（2D）
-		for (auto& fx : hitFX_)
-			fx.Draw();
-
 		if (enableSpeedLines_) {
 			DrawSpeedLines_();
 		}
@@ -233,33 +235,25 @@ void GameScene::HandleCollisions() {
 	auto& pBullets = player_->GetBullets();
 	auto& eBullets = enemy_->GetBullets();
 
-	// 自弾→敵
+	// プレイヤー弾 → 敵
 	for (auto it = pBullets.begin(); it != pBullets.end();) {
 		if (SphereHit(it->GetPos(), it->GetRadius(), enemy_->GetPosition(), enemy_->GetRadius())) {
 			enemy_->Damage(it->GetDamage());
-
-			// ★ 被弾フラッシュ（濃い目に）
-			HitFlash fx;
-			fx.Initialize(
-			    whiteTex_,
-			    it->GetPos(), // ヒット位置
-			    /*dur*/ 0.22f,
-			    /*startRadiusPx*/ 9.0f,
-			    /*endRadiusPx*/ 45.0f,
-			    /*peakAlpha*/ 1.35f // ← 濃さブースト
-			);
-			hitFX_.push_back(fx);
-
 			it = pBullets.erase(it);
 		} else {
 			++it;
 		}
 	}
 
-	// 敵弾→自機
+	// 敵弾 → プレイヤー
 	for (auto it = eBullets.begin(); it != eBullets.end();) {
 		if (SphereHit(it->GetPos(), it->GetRadius(), player_->GetPosition(), player_->GetRadius())) {
-			player_->Damage(it->GetDamage());
+			// 1ヒット＝1ダメージ
+			player_->Damage(1);
+
+			// 画面シェイク
+			TriggerShake(/*amp*/ 0.35f, /*duration*/ 0.18f, /*freq*/ 26.0f);
+
 			it = eBullets.erase(it);
 		} else {
 			++it;
@@ -308,7 +302,45 @@ void GameScene::ApplyForwardMotion_(float dz) {
 	}
 }
 
-// スピードライン生成
+void GameScene::TriggerShake(float amp, float duration, float freq) {
+	shakeAmp_ = std::max(shakeAmp_, amp);
+	shakeDuration_ = std::max(shakeDuration_, duration);
+	shakeTimer_ = std::max(shakeTimer_, duration);
+	shakeFreq_ = freq;
+
+	// 方向固定にならないようにランダム化
+	shakeSeed_ = static_cast<unsigned int>(std::rand());
+}
+
+void GameScene::UpdateShake_(float dt, Vector3& camTranslateIO) {
+	if (shakeTimer_ <= 0.0f || shakeDuration_ <= 0.0f || shakeAmp_ <= 0.0f) {
+		return;
+	}
+
+	shakeTimer_ -= dt;
+	float t = 1.0f - Clamp01(shakeTimer_ / shakeDuration_); // 0→1
+	float falloff = (1.0f - t);
+	falloff = falloff * falloff; // 二乗減衰
+
+	// ランダム2軸オフセット
+	float phaseBase = float((shakeSeed_ & 1023u)) * 0.0131f;
+	float time = (shakeDuration_ - shakeTimer_);
+	float x = std::sin((phaseBase + 3.1f) + time * shakeFreq_ * 6.2831853f);
+	float y = std::cos((phaseBase + 1.7f) + time * (shakeFreq_ * 0.85f) * 6.2831853f);
+
+	// XY中心に適用
+	camTranslateIO.x += x * shakeAmp_ * falloff;
+	camTranslateIO.y += y * shakeAmp_ * falloff;
+
+	// 終了処理
+	if (shakeTimer_ <= 0.0f) {
+		shakeTimer_ = 0.0f;
+		shakeDuration_ = 0.0f;
+		shakeAmp_ = 0.0f;
+	}
+}
+
+// スピードライン
 void GameScene::EmitSpeedLines_(float intensity) {
 	const float rate = 20.0f * intensity;
 	lineEmitAccum_ += rate * (1.0f / 60.0f);
@@ -338,7 +370,6 @@ void GameScene::EmitSpeedLines_(float intensity) {
 	}
 }
 
-// スピードライン更新
 void GameScene::UpdateSpeedLines_(float dt) {
 	const int SW = WinApp::kWindowWidth;
 	const int SH = WinApp::kWindowHeight;
@@ -353,6 +384,7 @@ void GameScene::UpdateSpeedLines_(float dt) {
 		it->life -= dt;
 		it->worldPos.z += it->velZ * dt;
 
+		// 全体前進量を相殺
 		it->worldPos.z -= lastScrollDz_;
 
 		if (it->life <= 0.0f || it->worldPos.z < camera_.translation_.z + 0.5f) {
@@ -364,6 +396,7 @@ void GameScene::UpdateSpeedLines_(float dt) {
 		Vector3 B = it->worldPos;
 		B.z -= it->worldLen;
 
+		// カリング
 		{
 			Vector4 clipA = Transform(Vector4{A.x, A.y, A.z, 1.0f}, viewProj);
 			Vector4 clipB = Transform(Vector4{B.x, B.y, B.z, 1.0f}, viewProj);

@@ -2,7 +2,6 @@
 #include "KamataEngine.h"
 
 #include "Enemy.h"
-#include "HitFlash.h" // ★追加
 #include "HpBar2D.h"
 #include "HpBarBillboard.h"
 #include "Player.h"
@@ -37,6 +36,15 @@ private:
 	float cameraBaseZ_ = -10.0f;
 	float cameraZNow_ = -10.0f;
 
+	// ===== 画面シェイク =====
+	void TriggerShake(float amp, float duration, float freq = 22.0f);
+	void UpdateShake_(float dt, Vector3& camTranslateIO);
+	float shakeTimer_ = 0.0f;     // 残り時間
+	float shakeDuration_ = 0.0f;  // 全体時間
+	float shakeAmp_ = 0.0f;       // 最大振幅
+	float shakeFreq_ = 22.0f;     // 周波数
+	unsigned int shakeSeed_ = 0u; // 乱数シード
+
 	// モデル
 	Model* modelPlayer_ = nullptr;
 	Model* modelEnemy_ = nullptr;
@@ -63,7 +71,7 @@ private:
 		Sprite* spr = nullptr;
 		Vector3 worldPos{0, 0, 0};
 		float worldLen = 3.0f;
-		float velZ = -12.0f;
+		float velZ = -12.0f; // カメラへ向かう
 		float thicknessPx = 3.0f;
 		float life = 0.0f;
 		float lifeInit = 0.0f;
@@ -77,24 +85,21 @@ private:
 	float vignetteMaxA_ = 0.35f;
 
 	// 全体前進
-	float railBaseSpeed_ = 6.0f; // [wu/s]
-	float railBoostMax_ = 10.0f; // 操作強度
-	float lastScrollDz_ = 0.0f;  // 現在フレームの前進量
-	float worldTravelZ_ = 0.0f;  // カメラ追従
-	void ApplyForwardMotion_(float dz);
+	float railBaseSpeed_ = 6.0f;        // [wu/s]
+	float railBoostMax_ = 10.0f;        // 操作強度
+	float lastScrollDz_ = 0.0f;         // 現在フレームの前進量
+	float worldTravelZ_ = 0.0f;         // カメラ追従
+	void ApplyForwardMotion_(float dz); // 弾をZ+へ
 
 	// 星の流れ
 	StarField starFar_;
 	StarField starNear_;
 
-	// 敵の見た目追従
-	float enemyDesiredLeadZ_ = 20.0f;
-	float enemyZNowVisual_ = 0.0f;
-	float enemyCohesionLerp_ = 0.12f;
-	float enemyDragOnBoost_ = 3.0f;
-
-	// ★ 被弾フラッシュ（2D）コンテナ
-	std::list<HitFlash> hitFX_;
+	// 視覚用パラメータ
+	float enemyDesiredLeadZ_ = 20.0f; // プレイヤーの少し前を保つ距離
+	float enemyZNowVisual_ = 0.0f;    // 敵の見た目
+	float enemyCohesionLerp_ = 0.12f; // 追従レート
+	float enemyDragOnBoost_ = 3.0f;   // 疾走時の押し戻し量
 
 private:
 	// 当たり判定まとめ
