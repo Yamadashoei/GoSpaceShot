@@ -18,7 +18,7 @@ using namespace KamataEngine;
 static inline float Clamp01(float v) { return (v < 0.f) ? 0.f : (v > 1.f) ? 1.f : v; }
 static inline float DegToRad(float d) { return d * 3.1415926535f / 180.0f; }
 
-// 左手座標系の透視投影
+// 透視投影（LH）
 static Matrix4x4 MakePerspectiveFovLH(float fovY, float aspect, float zn, float zf) {
 	Matrix4x4 m{};
 	const float f = 1.0f / std::tan(fovY * 0.5f);
@@ -29,8 +29,6 @@ static Matrix4x4 MakePerspectiveFovLH(float fovY, float aspect, float zn, float 
 	m.m[3][2] = (-zn * zf) / (zf - zn);
 	return m;
 }
-
-// カメラ 
 static Matrix4x4 MakeViewFromCameraTR(const Camera& cam) {
 	Matrix4x4 Tinv = MakeTranslateMatrix(Vector3{-cam.translation_.x, -cam.translation_.y, -cam.translation_.z});
 	Matrix4x4 Rinv = Multiply(MakeRotateZMatrix(-cam.rotation_.z), Multiply(MakeRotateYMatrix(-cam.rotation_.y), MakeRotateXMatrix(-cam.rotation_.x)));
@@ -58,6 +56,10 @@ void GameScene::Initialize() {
 	input_ = Input::GetInstance();
 	audio_ = Audio::GetInstance();
 
+	// 状態
+	state_ = PlayState::Playing;
+	pauseIndex_ = 0;
+
 	// カメラ
 	camera_.Initialize();
 	camera_.translation_ = {0.0f, 0.0f, cameraBaseZ_};
@@ -82,14 +84,11 @@ void GameScene::Initialize() {
 	player_ = new Player();
 	player_->Initialize(modelPlayer_);
 	player_->SetPosition({0.0f, 0.0f, 20.0f});
-
-	// 最大HP=5、現在HP=5
-	player_->SetMaxHP(5,true);
+	player_->SetMaxHP(250, /*refill=*/true); // ★ 被弾5発を想定して少し高めに
 
 	enemy_ = new Enemy();
 	enemy_->Initialize(modelEnemy_, {0.0f, 0.0f, 40.0f});
 
-	// 敵視覚Zの初期化
 	enemyZNowVisual_ = enemy_->GetPosition().z;
 
 	// 遷移
@@ -105,7 +104,7 @@ void GameScene::Initialize() {
 	skydome_ = new SkyDome();
 	skydome_->Initialize();
 
-	//星
+	// 星
 	const float kWideMarginPx = 500.0f;
 	starFar_.Initialize(whiteTex_, 220, 18.0f, 10.0f, 18.0f, 300.0f);
 	starFar_.ResetInView(camera_, WinApp::kWindowWidth, WinApp::kWindowHeight, 18.0f, 300.0f, kWideMarginPx);
@@ -120,7 +119,26 @@ void GameScene::Initialize() {
 void GameScene::Update() {
 	const float dt = 1.0f / 60.0f;
 
-	// 更新
+	// ESCでポーズON/OFF（どの状態でも受け付け）
+	if (input_->TriggerKey(DIK_ESCAPE)) {
+		if (state_ == PlayState::Playing) {
+			state_ = PlayState::Paused;
+			pauseIndex_ = 0;
+		} else {
+			state_ = PlayState::Playing;
+		}
+	}
+
+	if (state_ == PlayState::Paused) {
+		// ポーズ時：ゲームの進行を止めてUIだけ更新
+		UpdatePause_();
+
+		// カメラだけ最小限更新（行列だけ更新）
+		camera_.UpdateMatrix();
+		return; // 以降のゲーム更新を停止
+	}
+
+	// ======== ここから通常進行 ========
 	player_->Update();
 	enemy_->Update(player_->GetPosition(), dt);
 
@@ -144,10 +162,10 @@ void GameScene::Update() {
 	// スカイドーム
 	skydome_->Update();
 
-	// 疾走（0～1）
+	// 疾走
 	float intensity = Clamp01(player_->GetSpeed() / maxSpeedFX_);
 
-	// Z+へ前進
+	// 前進
 	{
 		float railSpeed = railBaseSpeed_ + railBoostMax_ * intensity;
 		lastScrollDz_ = railSpeed * dt;
@@ -155,37 +173,32 @@ void GameScene::Update() {
 		ApplyForwardMotion_(lastScrollDz_);
 	}
 
-	// 疾走時は少し押し戻される
+	// 敵の見た目Z
 	{
 		Vector3 p = player_->GetPosition();
 		Vector3 e = enemy_->GetPosition();
 
 		float targetZ = p.z + enemyDesiredLeadZ_ - enemyDragOnBoost_ * intensity;
 		enemyZNowVisual_ = enemyZNowVisual_ * (1.0f - enemyCohesionLerp_) + targetZ * enemyCohesionLerp_;
-
 		e.z = enemyZNowVisual_;
 		enemy_->SetPosition(e);
 	}
 
-	// カメラ＋スカイドーム追従
+	// カメラ＋スカイドーム追従（シェイク適用）
 	{
 		float targetZ = (cameraBaseZ_ + worldTravelZ_) - dashPullback_ * intensity;
 		cameraZNow_ = cameraZNow_ * 0.88f + targetZ * 0.12f;
 
 		Vector3 camT = camera_.translation_;
 		camT.z = cameraZNow_;
-
-		// 画面シェイク
 		UpdateShake_(dt, camT);
-
 		camera_.translation_ = camT;
 		camera_.UpdateMatrix();
 
-		// 空から抜けないようにスカイドームをカメラへ追従
 		skydome_->SetCenter(camera_.translation_);
 	}
 
-	// 星の流れ
+	// 星
 	starFar_.Update(camera_, dt, lastScrollDz_, player_->GetPosition(), intensity);
 	starNear_.Update(camera_, dt, lastScrollDz_, player_->GetPosition(), intensity);
 
@@ -216,15 +229,18 @@ void GameScene::Draw() {
 		starFar_.Draw();
 		starNear_.Draw();
 
-		if (enableSpeedLines_) {
-			DrawSpeedLines_();
-		}
-
+		// ビネット
 		float intensity = Clamp01(player_->GetSpeed() / maxSpeedFX_);
 		DrawVignette_(intensity);
 
+		// HP
 		playerHpUI_.Draw();
 		enemyHpUI_.Draw();
+
+		// ★ ポーズ時は最後にUIをオーバーレイ
+		if (state_ == PlayState::Paused) {
+			DrawPause_();
+		}
 	}
 	Sprite::PostDraw();
 
@@ -235,7 +251,6 @@ void GameScene::HandleCollisions() {
 	auto& pBullets = player_->GetBullets();
 	auto& eBullets = enemy_->GetBullets();
 
-	// プレイヤー弾 → 敵
 	for (auto it = pBullets.begin(); it != pBullets.end();) {
 		if (SphereHit(it->GetPos(), it->GetRadius(), enemy_->GetPosition(), enemy_->GetRadius())) {
 			enemy_->Damage(it->GetDamage());
@@ -245,14 +260,12 @@ void GameScene::HandleCollisions() {
 		}
 	}
 
-	// 敵弾 → プレイヤー
 	for (auto it = eBullets.begin(); it != eBullets.end();) {
 		if (SphereHit(it->GetPos(), it->GetRadius(), player_->GetPosition(), player_->GetRadius())) {
-			// 1ヒット＝1ダメージ
-			player_->Damage(1);
+			player_->Damage(it->GetDamage());
 
 			// 画面シェイク
-			TriggerShake(/*amp*/ 0.35f, /*duration*/ 0.18f, /*freq*/ 26.0f);
+			TriggerShake(/*amp*/ 0.35f, /*dur*/ 0.18f, /*freq*/ 26.0f);
 
 			it = eBullets.erase(it);
 		} else {
@@ -302,37 +315,30 @@ void GameScene::ApplyForwardMotion_(float dz) {
 	}
 }
 
+// ========== 画面シェイク ==========
 void GameScene::TriggerShake(float amp, float duration, float freq) {
 	shakeAmp_ = std::max(shakeAmp_, amp);
 	shakeDuration_ = std::max(shakeDuration_, duration);
 	shakeTimer_ = std::max(shakeTimer_, duration);
 	shakeFreq_ = freq;
-
-	// 方向固定にならないようにランダム化
 	shakeSeed_ = static_cast<unsigned int>(std::rand());
 }
-
 void GameScene::UpdateShake_(float dt, Vector3& camTranslateIO) {
-	if (shakeTimer_ <= 0.0f || shakeDuration_ <= 0.0f || shakeAmp_ <= 0.0f) {
+	if (shakeTimer_ <= 0.0f || shakeDuration_ <= 0.0f || shakeAmp_ <= 0.0f)
 		return;
-	}
-
 	shakeTimer_ -= dt;
 	float t = 1.0f - Clamp01(shakeTimer_ / shakeDuration_); // 0→1
 	float falloff = (1.0f - t);
-	falloff = falloff * falloff; // 二乗減衰
+	falloff = falloff * falloff;
 
-	// ランダム2軸オフセット
 	float phaseBase = float((shakeSeed_ & 1023u)) * 0.0131f;
 	float time = (shakeDuration_ - shakeTimer_);
 	float x = std::sin((phaseBase + 3.1f) + time * shakeFreq_ * 6.2831853f);
 	float y = std::cos((phaseBase + 1.7f) + time * (shakeFreq_ * 0.85f) * 6.2831853f);
 
-	// XY中心に適用
 	camTranslateIO.x += x * shakeAmp_ * falloff;
 	camTranslateIO.y += y * shakeAmp_ * falloff;
 
-	// 終了処理
 	if (shakeTimer_ <= 0.0f) {
 		shakeTimer_ = 0.0f;
 		shakeDuration_ = 0.0f;
@@ -349,7 +355,6 @@ void GameScene::EmitSpeedLines_(float intensity) {
 		lineEmitAccum_ -= 1.0f;
 
 		SpeedLine L;
-
 		Vector2 pos2D(0.0f, 0.0f);
 		Vector4 col(1.0f, 1.0f, 1.0f, 0.9f);
 		L.spr = Sprite::Create(whiteTex_, pos2D, col);
@@ -369,7 +374,6 @@ void GameScene::EmitSpeedLines_(float intensity) {
 		speedLines_.push_back(L);
 	}
 }
-
 void GameScene::UpdateSpeedLines_(float dt) {
 	const int SW = WinApp::kWindowWidth;
 	const int SH = WinApp::kWindowHeight;
@@ -383,8 +387,6 @@ void GameScene::UpdateSpeedLines_(float dt) {
 	for (auto it = speedLines_.begin(); it != speedLines_.end();) {
 		it->life -= dt;
 		it->worldPos.z += it->velZ * dt;
-
-		// 全体前進量を相殺
 		it->worldPos.z -= lastScrollDz_;
 
 		if (it->life <= 0.0f || it->worldPos.z < camera_.translation_.z + 0.5f) {
@@ -397,13 +399,11 @@ void GameScene::UpdateSpeedLines_(float dt) {
 		B.z -= it->worldLen;
 
 		// カリング
-		{
-			Vector4 clipA = Transform(Vector4{A.x, A.y, A.z, 1.0f}, viewProj);
-			Vector4 clipB = Transform(Vector4{B.x, B.y, B.z, 1.0f}, viewProj);
-			if (clipA.w <= 0.0f || clipB.w <= 0.0f) {
-				it = speedLines_.erase(it);
-				continue;
-			}
+		Vector4 clipA = Transform(Vector4{A.x, A.y, A.z, 1.0f}, viewProj);
+		Vector4 clipB = Transform(Vector4{B.x, B.y, B.z, 1.0f}, viewProj);
+		if (clipA.w <= 0.0f || clipB.w <= 0.0f) {
+			it = speedLines_.erase(it);
+			continue;
 		}
 
 		Vector2 As = WorldToScreen(A, view, proj, SW, SH);
@@ -429,14 +429,12 @@ void GameScene::UpdateSpeedLines_(float dt) {
 		++it;
 	}
 }
-
 void GameScene::DrawSpeedLines_() {
 	for (auto& l : speedLines_) {
 		if (l.spr)
 			l.spr->Draw();
 	}
 }
-
 void GameScene::DrawVignette_(float intensity) {
 	if (intensity <= 0.001f)
 		return;
@@ -460,4 +458,86 @@ void GameScene::DrawVignette_(float intensity) {
 	drawBand(0.0f, H - thick, W, thick);
 	drawBand(0.0f, 0.0f, thick, H);
 	drawBand(W - thick, 0.0f, thick, H);
+}
+
+// ===== ポーズUI =====
+void GameScene::UpdatePause_() {
+	// 上下で選択
+	if (input_->TriggerKey(DIK_W) || input_->TriggerKey(DIK_UP)) {
+		pauseIndex_ = (pauseIndex_ + 3 - 1) % 3;
+	}
+	if (input_->TriggerKey(DIK_S) || input_->TriggerKey(DIK_DOWN)) {
+		pauseIndex_ = (pauseIndex_ + 1) % 3;
+	}
+	// 決定（Enter/Space）
+	if (input_->TriggerKey(DIK_RETURN) || input_->TriggerKey(DIK_SPACE)) {
+		if (pauseIndex_ == 0) {
+			// 再開
+			state_ = PlayState::Playing;
+		} else if (pauseIndex_ == 1) {
+			// リスタート：シーン全再初期化（簡便）
+			Initialize();
+		} else {
+			// タイトルへ
+			next_ = true;
+			nextScene_ = SceneState::Title;
+		}
+	}
+}
+
+void GameScene::DrawPause_() {
+	const float W = static_cast<float>(WinApp::kWindowWidth);
+	const float H = static_cast<float>(WinApp::kWindowHeight);
+
+	// 半透明の暗幕
+	{
+		Vector2 pos(0.0f, 0.0f);
+		Vector4 col(0.0f, 0.0f, 0.0f, 0.55f);
+		Sprite* s = Sprite::Create(whiteTex_, pos, col);
+		s->SetAnchorPoint({0.0f, 0.0f});
+		s->SetPosition({0, 0});
+		s->SetSize({W, H});
+		s->Draw();
+	}
+
+	// 簡易ボタン（文字は未描画。必要ならフォント機能に置換）
+	struct Btn {
+		float y;
+		const char* label;
+	};
+	Btn btns[3] = {
+	    {H * 0.38f, "RESUME" },
+	    {H * 0.50f, "RESTART"},
+	    {H * 0.62f, "TITLE"  },
+	};
+
+	for (int i = 0; i < 3; ++i) {
+		float bw = 360.0f;
+		float bh = 56.0f;
+		float bx = (W - bw) * 0.5f;
+		float by = btns[i].y - bh * 0.5f;
+
+		float hi = (i == pauseIndex_) ? 1.0f : 0.6f;
+		Vector4 col(1.0f, 1.0f, 1.0f, 0.35f * hi);
+
+		Sprite* b = Sprite::Create(whiteTex_, {0, 0}, col);
+		b->SetAnchorPoint({0.0f, 0.0f});
+		b->SetPosition({bx, by});
+		b->SetSize({bw, bh});
+		b->Draw();
+
+		// 枠
+		Sprite* frame = Sprite::Create(whiteTex_, {0, 0}, {1, 1, 1, 0.8f * hi});
+		frame->SetAnchorPoint({0.0f, 0.0f});
+		frame->SetPosition({bx, by});
+		frame->SetSize({bw, 2.0f});
+		frame->Draw();
+		frame->SetPosition({bx, by + bh - 2.0f});
+		frame->Draw();
+		frame->SetSize({2.0f, bh});
+		frame->SetPosition({bx, by});
+		frame->Draw();
+		frame->SetPosition({bx + bw - 2.0f, by});
+		frame->Draw();
+	}
 }

@@ -31,6 +31,13 @@ private:
 	Input* input_ = nullptr;
 	Audio* audio_ = nullptr;
 
+	// ===== プレイ状態 =====
+	enum class PlayState { Playing, Paused };
+	PlayState state_ = PlayState::Playing;
+
+	// ポーズ選択 0:再開 1:リスタート 2:タイトル
+	int pauseIndex_ = 0;
+
 	// カメラ
 	Camera camera_;
 	float cameraBaseZ_ = -10.0f;
@@ -42,7 +49,7 @@ private:
 	float shakeTimer_ = 0.0f;     // 残り時間
 	float shakeDuration_ = 0.0f;  // 全体時間
 	float shakeAmp_ = 0.0f;       // 最大振幅
-	float shakeFreq_ = 22.0f;     // 周波数
+	float shakeFreq_ = 22.0f;     // 速さ[Hz]
 	unsigned int shakeSeed_ = 0u; // 乱数シード
 
 	// モデル
@@ -67,11 +74,12 @@ private:
 	// SpeedLine
 	bool enableSpeedLines_ = false;
 
+	// スピードライン
 	struct SpeedLine {
 		Sprite* spr = nullptr;
 		Vector3 worldPos{0, 0, 0};
 		float worldLen = 3.0f;
-		float velZ = -12.0f; // カメラへ向かう
+		float velZ = -12.0f;
 		float thicknessPx = 3.0f;
 		float life = 0.0f;
 		float lifeInit = 0.0f;
@@ -89,7 +97,7 @@ private:
 	float railBoostMax_ = 10.0f;        // 操作強度
 	float lastScrollDz_ = 0.0f;         // 現在フレームの前進量
 	float worldTravelZ_ = 0.0f;         // カメラ追従
-	void ApplyForwardMotion_(float dz); // 弾をZ+へ
+	void ApplyForwardMotion_(float dz); // Player/Enemyの弾をZ+へ
 
 	// 星の流れ
 	StarField starFar_;
@@ -97,7 +105,7 @@ private:
 
 	// 視覚用パラメータ
 	float enemyDesiredLeadZ_ = 20.0f; // プレイヤーの少し前を保つ距離
-	float enemyZNowVisual_ = 0.0f;    // 敵の見た目
+	float enemyZNowVisual_ = 0.0f;    // 敵の見た目Z
 	float enemyCohesionLerp_ = 0.12f; // 追従レート
 	float enemyDragOnBoost_ = 3.0f;   // 疾走時の押し戻し量
 
@@ -113,4 +121,8 @@ private:
 	void UpdateSpeedLines_(float dt);
 	void DrawSpeedLines_();
 	void DrawVignette_(float intensity);
+
+	// ===== ポーズUI =====
+	void UpdatePause_();
+	void DrawPause_();
 };
