@@ -36,7 +36,7 @@ void HitFlash::Initialize(uint32_t whiteTex, const Vector3& worldPos, float dura
 	r1_ = endRadiusPx;
 	peakAlpha_ = peakAlpha;
 
-	// 中心基準で円板を描く（白1x1を拡大）
+	// 中心基準で円板を描く
 	Vector2 pos(0, 0);
 	Vector4 col(1, 0, 0, 1); // 赤
 	spr_ = Sprite::Create(tex_, pos, col);
@@ -52,16 +52,15 @@ void HitFlash::Update(const Camera& cam, float dt) {
 	t_ += dt;
 	float u = Clamp01(t_ / dur_); // 0→1
 
-	// 半径補間（線形）
+	// 半径補間
 	float radius = r0_ + (r1_ - r0_) * u;
 
-	// 不透明度カーブ：序盤強め保持→後半急減衰
-	// 例：alphaBase = (1-u)^2 を少し強め、ピークで倍率
+	// 不透明度カーブ
 	float alphaBase = (1.0f - u);
-	alphaBase = alphaBase * alphaBase; // 二乗で急減衰
+	alphaBase = alphaBase * alphaBase; 
 	float alpha = Clamp01(alphaBase * peakAlpha_);
 
-	// ワールド→スクリーン投影
+	// ワールドからスクリーン投影
 	const int SW = WinApp::kWindowWidth;
 	const int SH = WinApp::kWindowHeight;
 	const float aspect = float(SW) / float(SH);
@@ -72,8 +71,8 @@ void HitFlash::Update(const Camera& cam, float dt) {
 
 	// セット
 	spr_->SetPosition(screen_);
-	spr_->SetSize({radius * 2.0f, radius * 2.0f}); // 直径で拡大
-	spr_->SetColor({1.0f, 0.0f, 0.0f, alpha});     // 濃い赤（R=1,G=0,B=0）×ピーク
+	spr_->SetSize({radius * 2.0f, radius * 2.0f}); 
+	spr_->SetColor({1.0f, 0.0f, 0.0f, alpha});     // 濃い赤
 
 	if (u >= 1.0f) {
 		alive_ = false;

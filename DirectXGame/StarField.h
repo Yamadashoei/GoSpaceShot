@@ -28,10 +28,10 @@ private:
 	struct Star {
 		KamataEngine::Sprite* spr = nullptr;
 
-		// 3Dモード用
+		// 3Dモード
 		KamataEngine::Vector3 world{0, 0, 0};
 
-		// 2Dモード用
+		// 2Dモード
 		KamataEngine::Vector2 screen{0, 0};
 		float depth01 = 0.0f; // 0=近い, 1=遠い
 

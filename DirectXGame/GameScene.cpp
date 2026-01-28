@@ -18,7 +18,7 @@ using namespace KamataEngine;
 static inline float Clamp01(float v) { return (v < 0.f) ? 0.f : (v > 1.f) ? 1.f : v; }
 static inline float DegToRad(float d) { return d * 3.1415926535f / 180.0f; }
 
-// 透視投影（LH）
+// 透視投影
 static Matrix4x4 MakePerspectiveFovLH(float fovY, float aspect, float zn, float zf) {
 	Matrix4x4 m{};
 	const float f = 1.0f / std::tan(fovY * 0.5f);
@@ -84,7 +84,7 @@ void GameScene::Initialize() {
 	player_ = new Player();
 	player_->Initialize(modelPlayer_);
 	player_->SetPosition({0.0f, 0.0f, 20.0f});
-	player_->SetMaxHP(250, /*refill=*/true); // ★ 被弾5発を想定して少し高めに
+	player_->SetMaxHP(250, /*refill=*/true); //被弾5発を想定して少し高めに
 
 	enemy_ = new Enemy();
 	enemy_->Initialize(modelEnemy_, {0.0f, 0.0f, 40.0f});
@@ -119,7 +119,7 @@ void GameScene::Initialize() {
 void GameScene::Update() {
 	const float dt = 1.0f / 60.0f;
 
-	// ESCでポーズON/OFF（どの状態でも受け付け）
+	// ESCでポーズON/OFF
 	if (input_->TriggerKey(DIK_ESCAPE)) {
 		if (state_ == PlayState::Playing) {
 			state_ = PlayState::Paused;
@@ -133,12 +133,12 @@ void GameScene::Update() {
 		// ポーズ時：ゲームの進行を止めてUIだけ更新
 		UpdatePause_();
 
-		// カメラだけ最小限更新（行列だけ更新）
+		// カメラだけ最小限更新
 		camera_.UpdateMatrix();
-		return; // 以降のゲーム更新を停止
+		return; // ゲーム更新を停止
 	}
 
-	// ======== ここから通常進行 ========
+	// 通常進行
 	player_->Update();
 	enemy_->Update(player_->GetPosition(), dt);
 
@@ -184,7 +184,7 @@ void GameScene::Update() {
 		enemy_->SetPosition(e);
 	}
 
-	// カメラ＋スカイドーム追従（シェイク適用）
+	// カメラ＋スカイドーム追従
 	{
 		float targetZ = (cameraBaseZ_ + worldTravelZ_) - dashPullback_ * intensity;
 		cameraZNow_ = cameraZNow_ * 0.88f + targetZ * 0.12f;
@@ -237,7 +237,7 @@ void GameScene::Draw() {
 		playerHpUI_.Draw();
 		enemyHpUI_.Draw();
 
-		// ★ ポーズ時は最後にUIをオーバーレイ
+		//ポーズ時は最後にUIをオーバーレイ
 		if (state_ == PlayState::Paused) {
 			DrawPause_();
 		}
@@ -315,7 +315,7 @@ void GameScene::ApplyForwardMotion_(float dz) {
 	}
 }
 
-// ========== 画面シェイク ==========
+//画面シェイク 
 void GameScene::TriggerShake(float amp, float duration, float freq) {
 	shakeAmp_ = std::max(shakeAmp_, amp);
 	shakeDuration_ = std::max(shakeDuration_, duration);
@@ -460,7 +460,7 @@ void GameScene::DrawVignette_(float intensity) {
 	drawBand(W - thick, 0.0f, thick, H);
 }
 
-// ===== ポーズUI =====
+// ポーズUI
 void GameScene::UpdatePause_() {
 	// 上下で選択
 	if (input_->TriggerKey(DIK_W) || input_->TriggerKey(DIK_UP)) {
@@ -469,13 +469,13 @@ void GameScene::UpdatePause_() {
 	if (input_->TriggerKey(DIK_S) || input_->TriggerKey(DIK_DOWN)) {
 		pauseIndex_ = (pauseIndex_ + 1) % 3;
 	}
-	// 決定（Enter/Space）
+	// 決定
 	if (input_->TriggerKey(DIK_RETURN) || input_->TriggerKey(DIK_SPACE)) {
 		if (pauseIndex_ == 0) {
 			// 再開
 			state_ = PlayState::Playing;
 		} else if (pauseIndex_ == 1) {
-			// リスタート：シーン全再初期化（簡便）
+			// リスタート
 			Initialize();
 		} else {
 			// タイトルへ
@@ -500,7 +500,7 @@ void GameScene::DrawPause_() {
 		s->Draw();
 	}
 
-	// 簡易ボタン（文字は未描画。必要ならフォント機能に置換）
+	// 簡易ボタン
 	struct Btn {
 		float y;
 		const char* label;

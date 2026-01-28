@@ -31,7 +31,7 @@ private:
 	Input* input_ = nullptr;
 	Audio* audio_ = nullptr;
 
-	// ===== プレイ状態 =====
+	// プレイ状態
 	enum class PlayState { Playing, Paused };
 	PlayState state_ = PlayState::Playing;
 
@@ -43,7 +43,7 @@ private:
 	float cameraBaseZ_ = -10.0f;
 	float cameraZNow_ = -10.0f;
 
-	// ===== 画面シェイク =====
+	// 画面シェイク
 	void TriggerShake(float amp, float duration, float freq = 22.0f);
 	void UpdateShake_(float dt, Vector3& camTranslateIO);
 	float shakeTimer_ = 0.0f;     // 残り時間
@@ -122,7 +122,7 @@ private:
 	void DrawSpeedLines_();
 	void DrawVignette_(float intensity);
 
-	// ===== ポーズUI =====
+	// ポーズUI
 	void UpdatePause_();
 	void DrawPause_();
 };
