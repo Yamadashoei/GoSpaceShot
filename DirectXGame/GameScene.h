@@ -9,7 +9,7 @@
 #include "SkyDome.h"
 #include "StarField.h"
 
-#include <algorithm>
+#include <algorithm> 
 #include <list>
 
 using namespace KamataEngine;
