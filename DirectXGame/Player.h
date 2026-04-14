@@ -73,6 +73,6 @@ private:
 
 	// A/D で傾ける
 	float rollRad_ = 0.0f;
-	const float rollMaxRad_ = 3.14159265f / 4.0f;
+	const float rollMaxRad_ = 3.14f / 4.0f;
 	const float rollLerp_ = 0.2f;
 };

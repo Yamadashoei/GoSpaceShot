@@ -2,7 +2,7 @@
 #include "Collision.h"
 #include "KamataEngine.h"
 
-class EnemyBullet {
+class EnemyBullet { 
 public:
 	void Initialize(KamataEngine::Model*, const KamataEngine::Vector3& pos, const KamataEngine::Vector3& vel);
 	void Initialize(const KamataEngine::Vector3& pos);
