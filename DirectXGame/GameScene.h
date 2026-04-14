@@ -9,10 +9,10 @@
 #include "SkyDome.h"
 #include "StarField.h"
 
-#include <algorithm> 
+#include <algorithm>
 #include <list>
 
-using namespace KamataEngine;
+using namespace KamataEngine; 
 
 class GameScene {
 public:
@@ -24,6 +24,23 @@ public:
 
 	bool IsNextSceneRequested() const { return next_; }
 	SceneState GetNextScene() const { return nextScene_; }
+
+private:
+	// 当たり判定まとめ
+	void HandleCollisions();
+
+	// 球判定
+	static bool SphereHit(const Vector3& a, float ra, const Vector3& b, float rb);
+
+	// 2D演出
+	void EmitSpeedLines_(float intensity);
+	void UpdateSpeedLines_(float dt);
+	void DrawSpeedLines_();
+	void DrawVignette_(float intensity);
+
+	// ポーズUI
+	void UpdatePause_();
+	void DrawPause_();
 
 private:
 	// 基盤
@@ -108,21 +125,4 @@ private:
 	float enemyZNowVisual_ = 0.0f;    // 敵の見た目Z
 	float enemyCohesionLerp_ = 0.12f; // 追従レート
 	float enemyDragOnBoost_ = 3.0f;   // 疾走時の押し戻し量
-
-private:
-	// 当たり判定まとめ
-	void HandleCollisions();
-
-	// 球判定
-	static bool SphereHit(const Vector3& a, float ra, const Vector3& b, float rb);
-
-	// 2D演出
-	void EmitSpeedLines_(float intensity);
-	void UpdateSpeedLines_(float dt);
-	void DrawSpeedLines_();
-	void DrawVignette_(float intensity);
-
-	// ポーズUI
-	void UpdatePause_();
-	void DrawPause_();
 };
