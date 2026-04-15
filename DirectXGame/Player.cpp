@@ -17,10 +17,10 @@ void Player::Initialize(Model* model) {
 
 	bullets_.clear();
 
-	// HPは最大値で満タンに
+	// HPは最大値で満タン
 	hp_ = maxHP_;
 
-	// スピード算出初期化
+	// スピード初期化
 	prevPos_ = wt_.translation_;
 	speedFrame_ = 0.0f;
 

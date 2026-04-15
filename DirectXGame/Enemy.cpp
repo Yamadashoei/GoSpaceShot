@@ -50,8 +50,13 @@ void Enemy::SetMoveBounds(float left, float right) {
 
 void Enemy::SetSpeed(float unitsPerSec) { moveSpeedX_ = unitsPerSec; }
 
+//ポリモーフィズム
+void Enemy::Update() {
+	Update(wt_.translation_, 1.0f / 60.0f);
+}
+
 void Enemy::Update(const Vector3& playerPos, float deltaSec) {
-	// X: 往復
+	//往復
 	wt_.translation_.x += moveSpeedX_ * deltaSec;
 	if (wt_.translation_.x <= moveLeft_) {
 		wt_.translation_.x = moveLeft_;
@@ -62,7 +67,7 @@ void Enemy::Update(const Vector3& playerPos, float deltaSec) {
 		moveSpeedX_ = -std::abs(moveSpeedX_);
 	}
 
-	// Z: モード切替
+	//モード切替
 	zModeTimer_ -= deltaSec;
 	if (zModeTimer_ <= 0.0f) {
 		float r = Rand01();
@@ -79,7 +84,7 @@ void Enemy::Update(const Vector3& playerPos, float deltaSec) {
 	gap += (targetGap - gap) * t;
 	wt_.translation_.z = playerPos.z + gap;
 
-	// Y: ランダム追従
+	//ランダム追従
 	yRetargetTimer_ -= deltaSec;
 	if (yRetargetTimer_ <= 0.0f) {
 		yTarget_ = RandRange(yRangeMin_, yRangeMax_);
@@ -94,7 +99,7 @@ void Enemy::Update(const Vector3& playerPos, float deltaSec) {
 			wt_.translation_.y += (dy > 0.0f ? step : -step);
 	}
 
-	// 発射：プレイヤー狙い
+	// 発射
 	shotTimerSec_ += deltaSec;
 	if (shotTimerSec_ >= shotIntervalSec_) {
 		shotTimerSec_ = 0.0f;

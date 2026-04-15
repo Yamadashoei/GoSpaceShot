@@ -10,36 +10,38 @@
 #undef min
 #endif
 
+#include "Actor.h"
 #include "Collision.h"
 #include "KamataEngine.h"
 #include "PlayerBullet.h"
-#include <algorithm> // std::max / min / clamp
+#include <algorithm>
 #include <list>
 
-class Player {
+class Player : public Actor {
 public:
 	void Initialize(KamataEngine::Model* model);
 	void SetPosition(const KamataEngine::Vector3& pos);
 	void SetMoveSpeed(float s) { moveSpeed_ = s; }
 
-	void Update();
-	void Draw(KamataEngine::Camera& cam);
+	void Update() override;
+	void Draw(KamataEngine::Camera& cam) override;
 
 	// 弾
 	std::list<PlayerBullet>& GetBullets() { return bullets_; }
-	const KamataEngine::Vector3& GetPosition() const { return wt_.translation_; }
-	float GetRadius() const { return radius_; }
 
-	// 今フレームの移動量
+	const KamataEngine::Vector3& GetPosition() const override { return wt_.translation_; }
+	float GetRadius() const override { return radius_; }
+
+	// 現在フレームの移動量
 	float GetSpeed() const { return speedFrame_; }
 
 	// HP
-	void Damage(int d) { hp_ = (std::max)(0, hp_ - d); }
-	bool IsDead() const { return hp_ <= 0; }
-	int GetHP() const { return hp_; }
-	int GetMaxHP() const { return maxHP_; }
+	void Damage(int d) override { hp_ = (std::max)(0, hp_ - d); }
+	bool IsDead() const override { return hp_ <= 0; }
+	int GetHP() const override { return hp_; }
+	int GetMaxHP() const override { return maxHP_; }
 
-	// 追加：最大HP/現在HPの設定
+	// 最大HP/現在HPの設定
 	void SetMaxHP(int v, bool refill = true) {
 		maxHP_ = (std::max)(1, v);
 		if (refill)
@@ -67,7 +69,7 @@ private:
 	int maxHP_ = 100;
 	int hp_ = 100;
 
-	// スピード算出
+	// スピード
 	KamataEngine::Vector3 prevPos_{0, 0, 0};
 	float speedFrame_ = 0.0f;
 
