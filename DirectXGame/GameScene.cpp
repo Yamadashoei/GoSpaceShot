@@ -165,7 +165,7 @@ void GameScene::Update() {
 	// 疾走
 	float intensity = Clamp01(player_->GetSpeed() / maxSpeedFX_);
 
-	// 前進
+	// 前進　
 	{
 		float railSpeed = railBaseSpeed_ + railBoostMax_ * intensity;
 		lastScrollDz_ = railSpeed * dt;
