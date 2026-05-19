@@ -5,7 +5,10 @@ void Rule::Initialize() {
 	input_ = Input::GetInstance();
 	camera_.Initialize();
 
-	sprRule_ = Sprite::Create(TextureManager::Load("./Resources/Scene/rule.png"), {0.0f, 0.0f}); // 仮画像でOK
+	sprRule_ = Sprite::Create(TextureManager::Load("./Resources/Scene/rule.png"), {0.0f, 0.0f});
+
+	next_ = false;
+	nextScene_ = SceneState::Game;
 }
 
 void Rule::Update() {

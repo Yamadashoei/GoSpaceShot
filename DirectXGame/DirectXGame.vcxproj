@@ -283,6 +283,7 @@
     <ClInclude Include="HitFlash.h" />
     <ClInclude Include="HpBar2D.h" />
     <ClInclude Include="HpBarBillboard.h" />
+    <ClInclude Include="IScene.h" />
     <ClInclude Include="kMath.h" />
     <ClInclude Include="Player.h" />
     <ClInclude Include="PlayerBullet.h" />

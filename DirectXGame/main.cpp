@@ -5,82 +5,42 @@
 #include "GameClear.h"
 #include "GameOver.h"
 #include "GameScene.h"
+#include "IScene.h"
 #include "Rule.h"
 #include "SceneState.h"
 #include "Title.h"
 
 using namespace KamataEngine;
 
-static std::unique_ptr<Title> gTitle;
-static std::unique_ptr<Rule> gRule;
-static std::unique_ptr<GameScene> gGame;
-static std::unique_ptr<GameClear> gClear;
-static std::unique_ptr<GameOver> gOver;
-
+static std::unique_ptr<IScene> currentScene;
 static SceneState gState = SceneState::Title;
 
 static void CreateAndInit(SceneState s) {
 	switch (s) {
 	case SceneState::Title:
-		gTitle = std::make_unique<Title>();
-		gTitle->Initialize();
+		currentScene = std::make_unique<Title>();
 		break;
 	case SceneState::Rule:
-		gRule = std::make_unique<Rule>();
-		gRule->Initialize();
+		currentScene = std::make_unique<Rule>();
 		break;
 	case SceneState::Game:
-		gGame = std::make_unique<GameScene>();
-		gGame->Initialize();
+		currentScene = std::make_unique<GameScene>();
 		break;
 	case SceneState::GameClear:
-		gClear = std::make_unique<GameClear>();
-		gClear->Initialize();
+		currentScene = std::make_unique<GameClear>();
 		break;
 	case SceneState::GameOver:
-		gOver = std::make_unique<GameOver>();
-		gOver->Initialize();
+		currentScene = std::make_unique<GameOver>();
 		break;
 	}
+	currentScene->Initialize();
 }
 
 static bool CheckAndTransit() {
-	switch (gState) {
-	case SceneState::Title:
-		if (gTitle->IsNextSceneRequested()) {
-			gState = gTitle->GetNextScene();
-			CreateAndInit(gState);
-			return true;
-		}
-		break;
-	case SceneState::Rule:
-		if (gRule->IsNextSceneRequested()) {
-			gState = gRule->GetNextScene();
-			CreateAndInit(gState);
-			return true;
-		}
-		break;
-	case SceneState::Game:
-		if (gGame->IsNextSceneRequested()) {
-			gState = gGame->GetNextScene();
-			CreateAndInit(gState);
-			return true;
-		}
-		break;
-	case SceneState::GameClear:
-		if (gClear->IsNextSceneRequested()) {
-			gState = gClear->GetNextScene();
-			CreateAndInit(gState);
-			return true;
-		}
-		break;
-	case SceneState::GameOver:
-		if (gOver->IsNextSceneRequested()) {
-			gState = gOver->GetNextScene();
-			CreateAndInit(gState);
-			return true;
-		}
-		break;
+	if (currentScene->IsNextSceneRequested()) {
+		gState = currentScene->GetNextScene();
+		CreateAndInit(gState);
+		return true;
 	}
 	return false;
 }
@@ -98,43 +58,11 @@ int WINAPI WinMain(_In_ HINSTANCE, _In_opt_ HINSTANCE, _In_ LPSTR, _In_ int) {
 			break;
 
 		// Update
-		switch (gState) {
-		case SceneState::Title:
-			gTitle->Update();
-			break;
-		case SceneState::Rule:
-			gRule->Update();
-			break;
-		case SceneState::Game:
-			gGame->Update();
-			break;
-		case SceneState::GameClear:
-			gClear->Update();
-			break;
-		case SceneState::GameOver:
-			gOver->Update();
-			break;
-		}
+		currentScene->Update();
 
 		// Draw
 		dx->PreDraw();
-		switch (gState) {
-		case SceneState::Title:
-			gTitle->Draw();
-			break;
-		case SceneState::Rule:
-			gRule->Draw();
-			break;
-		case SceneState::Game:
-			gGame->Draw();
-			break;
-		case SceneState::GameClear:
-			gClear->Draw();
-			break;
-		case SceneState::GameOver:
-			gOver->Draw();
-			break;
-		}
+		currentScene->Draw();
 		dx->PostDraw();
 
 		// Transit

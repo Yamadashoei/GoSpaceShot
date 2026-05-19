@@ -6,6 +6,9 @@ void Title::Initialize() {
 	camera_.Initialize();
 
 	sprTitle_ = Sprite::Create(TextureManager::Load("./Resources/Scene/title.png"), {0.0f, 0.0f});
+
+	next_ = false;
+	nextScene_ = SceneState::Rule;
 }
 
 void Title::Update() {

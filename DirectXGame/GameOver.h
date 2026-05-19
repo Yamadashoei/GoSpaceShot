@@ -1,15 +1,16 @@
 #pragma once
+#include "IScene.h"
 #include "KamataEngine.h"
 #include "SceneState.h"
 
-class GameOver {
+class GameOver : public IScene {
 public:
-	void Initialize();
-	void Update();
-	void Draw();
+	void Initialize() override;
+	void Update() override;
+	void Draw() override;
 
-	bool IsNextSceneRequested() const { return next_; }
-	SceneState GetNextScene() const { return nextScene_; }
+	bool IsNextSceneRequested() const override { return next_; }
+	SceneState GetNextScene() const override { return nextScene_; }
 
 	~GameOver();
 

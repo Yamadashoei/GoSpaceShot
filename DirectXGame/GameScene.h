@@ -1,4 +1,5 @@
 #pragma once
+#include "IScene.h"
 #include "KamataEngine.h"
 
 #include "Enemy.h"
@@ -12,18 +13,18 @@
 #include <algorithm>
 #include <list>
 
-using namespace KamataEngine; 
+using namespace KamataEngine;
 
-class GameScene {
+class GameScene : public IScene {
 public:
 	~GameScene();
 
-	void Initialize();
-	void Update();
-	void Draw();
+	void Initialize() override;
+	void Update() override;
+	void Draw() override;
 
-	bool IsNextSceneRequested() const { return next_; }
-	SceneState GetNextScene() const { return nextScene_; }
+	bool IsNextSceneRequested() const override { return next_; }
+	SceneState GetNextScene() const override { return nextScene_; }
 
 private:
 	// 当たり判定まとめ
@@ -63,11 +64,11 @@ private:
 	// 画面シェイク
 	void TriggerShake(float amp, float duration, float freq = 22.0f);
 	void UpdateShake_(float dt, Vector3& camTranslateIO);
-	float shakeTimer_ = 0.0f;     // 残り時間
-	float shakeDuration_ = 0.0f;  // 全体時間
-	float shakeAmp_ = 0.0f;       // 最大振幅
-	float shakeFreq_ = 22.0f;     // 速さ[Hz]
-	unsigned int shakeSeed_ = 0u; // 乱数シード
+	float shakeTimer_ = 0.0f;
+	float shakeDuration_ = 0.0f;
+	float shakeAmp_ = 0.0f;
+	float shakeFreq_ = 22.0f;
+	unsigned int shakeSeed_ = 0u;
 
 	// モデル
 	Model* modelPlayer_ = nullptr;
@@ -110,19 +111,19 @@ private:
 	float vignetteMaxA_ = 0.35f;
 
 	// 全体前進
-	float railBaseSpeed_ = 6.0f;        // [wu/s]
-	float railBoostMax_ = 10.0f;        // 操作強度
-	float lastScrollDz_ = 0.0f;         // 現在フレームの前進量
-	float worldTravelZ_ = 0.0f;         // カメラ追従
-	void ApplyForwardMotion_(float dz); // Player/Enemyの弾をZ+へ
+	float railBaseSpeed_ = 6.0f;
+	float railBoostMax_ = 10.0f;
+	float lastScrollDz_ = 0.0f;
+	float worldTravelZ_ = 0.0f;
+	void ApplyForwardMotion_(float dz);
 
 	// 星の流れ
 	StarField starFar_;
 	StarField starNear_;
 
 	// 視覚用パラメータ
-	float enemyDesiredLeadZ_ = 20.0f; // プレイヤーの少し前を保つ距離
-	float enemyZNowVisual_ = 0.0f;    // 敵の見た目Z
-	float enemyCohesionLerp_ = 0.12f; // 追従レート
-	float enemyDragOnBoost_ = 3.0f;   // 疾走時の押し戻し量
+	float enemyDesiredLeadZ_ = 20.0f;
+	float enemyZNowVisual_ = 0.0f;
+	float enemyCohesionLerp_ = 0.12f;
+	float enemyDragOnBoost_ = 3.0f;
 };
