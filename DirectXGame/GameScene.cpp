@@ -18,6 +18,8 @@ using namespace KamataEngine;
 static inline float Clamp01(float v) { return (v < 0.f) ? 0.f : (v > 1.f) ? 1.f : v; }
 static inline float DegToRad(float d) { return d * 3.1415926535f / 180.0f; }
 
+//SR2_01_04
+
 // 透視投影
 static Matrix4x4 MakePerspectiveFovLH(float fovY, float aspect, float zn, float zf) {
 	Matrix4x4 m{};
