@@ -215,12 +215,23 @@ void GameScene::Update() {
 void GameScene::Draw() {
 	ID3D12GraphicsCommandList* cmd = dxCommon_->GetCommandList();
 
-	// 3D
 	Model::PreDraw();
-	enemy_->Draw(camera_);
-	player_->Draw(camera_);
+
+	Actor* actors[] = {player_, enemy_};
+	for (Actor* actor : actors) {
+		actor->Draw(camera_);
+	}
+
 	skydome_->Draw(camera_);
+
 	Model::PostDraw();
+
+	//// 3D
+	//Model::PreDraw();
+	//enemy_->Draw(camera_);
+	//player_->Draw(camera_);
+	//skydome_->Draw(camera_);
+	//Model::PostDraw();
 
 	// 2D
 	Sprite::PreDraw(cmd);
