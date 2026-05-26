@@ -31,6 +31,23 @@ public:
 	int GetMaxHP() const override { return 300; }
 
 private:
+	// ===== 状態管理（クラス内で軽く分ける）=====
+	enum class ZState { Normal, Special };
+
+private:
+	void UpdateState_(float deltaSec);
+	void UpdateXMove_(float deltaSec);
+	void UpdateZMove_(const KamataEngine::Vector3& playerPos, float deltaSec);
+	void UpdateZNormal_(const KamataEngine::Vector3& playerPos, float deltaSec);
+	void UpdateZSpecial_(const KamataEngine::Vector3& playerPos, float deltaSec);
+	void ApplyTargetGap_(const KamataEngine::Vector3& playerPos, float targetGap, float deltaSec);
+
+	void UpdateYMove_(float deltaSec);
+	void UpdateShot_(const KamataEngine::Vector3& playerPos, float deltaSec);
+	void UpdateBullets_();
+	void UpdateMatrix_();
+
+private:
 	KamataEngine::WorldTransform wt_{};
 	KamataEngine::Model* model_ = nullptr;
 
@@ -40,11 +57,12 @@ private:
 
 	// Z 前後移動
 	float desiredLeadZ_ = 18.0f;
-	float zModeTimer_ = 0.0f;
-	float zModeDuration_ = 0.0f;
-	int zMode_ = 0;
+	float zStateTimer_ = 0.0f;
+	ZState zState_ = ZState::Normal;
+	bool specialRetreat_ = false;
 	float retreatExtraMin_ = 6.0f;
 	float retreatExtraMax_ = 14.0f;
+	float specialRetreatGap_ = 0.0f;
 	float zCohesionRate_ = 3.0f;
 
 	// Y ランダム移動
@@ -65,6 +83,6 @@ private:
 
 	// 当たり判定
 	float radius_ = 1.2f;
-	//HP
+	// HP
 	int hp_ = 300;
 };

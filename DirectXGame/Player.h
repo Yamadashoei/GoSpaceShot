@@ -44,12 +44,33 @@ public:
 	// 最大HP/現在HPの設定
 	void SetMaxHP(int v, bool refill = true) {
 		maxHP_ = (std::max)(1, v);
-		if (refill)
+		if (refill) {
 			hp_ = maxHP_;
-		else
+		} else {
 			hp_ = (std::min)(hp_, maxHP_);
+		}
 	}
 	void SetHP(int v) { hp_ = (std::clamp)(v, 0, maxHP_); }
+
+private:
+	// ===== 状態管理（クラス内で軽く分ける）=====
+	enum class ActionState { Normal, Attack };
+	ActionState actionState_ = ActionState::Normal;
+
+private:
+	void UpdateState_();
+	void UpdateByState_();
+
+	void HandleInput_();
+	void UpdateNormalState_();
+	void UpdateAttackState_();
+
+	void UpdateMove_();
+	void UpdateRoll_();
+	void FireBullet_();
+	void UpdateBullets_();
+	void UpdateSpeed_();
+	void UpdateMatrix_();
 
 private:
 	KamataEngine::WorldTransform wt_{};
@@ -72,6 +93,13 @@ private:
 	// スピード
 	KamataEngine::Vector3 prevPos_{0, 0, 0};
 	float speedFrame_ = 0.0f;
+
+	// 入力保持
+	bool inputLeft_ = false;
+	bool inputRight_ = false;
+	bool inputUp_ = false;
+	bool inputDown_ = false;
+	bool inputAttackTrigger_ = false;
 
 	// A/D で傾ける
 	float rollRad_ = 0.0f;

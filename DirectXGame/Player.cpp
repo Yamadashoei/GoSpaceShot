@@ -25,6 +25,13 @@ void Player::Initialize(Model* model) {
 	speedFrame_ = 0.0f;
 
 	rollRad_ = 0.0f;
+	actionState_ = ActionState::Normal;
+
+	inputLeft_ = false;
+	inputRight_ = false;
+	inputUp_ = false;
+	inputDown_ = false;
+	inputAttackTrigger_ = false;
 }
 
 void Player::SetPosition(const Vector3& pos) {
@@ -34,50 +41,110 @@ void Player::SetPosition(const Vector3& pos) {
 }
 
 void Player::Update() {
-	bool left = input_->PushKey(DIK_A);
-	bool right = input_->PushKey(DIK_D);
+	HandleInput_();
+	UpdateState_();
+	UpdateByState_();
+	UpdateBullets_();
+	UpdateSpeed_();
+	UpdateMatrix_();
+}
 
-	if (left)
+void Player::HandleInput_() {
+	inputLeft_ = input_->PushKey(DIK_A);
+	inputRight_ = input_->PushKey(DIK_D);
+	inputUp_ = input_->PushKey(DIK_W);
+	inputDown_ = input_->PushKey(DIK_S);
+	inputAttackTrigger_ = input_->TriggerKey(DIK_SPACE) || input_->IsTriggerMouse(0);
+}
+
+void Player::UpdateState_() {
+	if (inputAttackTrigger_) {
+		actionState_ = ActionState::Attack;
+	} else {
+		actionState_ = ActionState::Normal;
+	}
+}
+
+void Player::UpdateByState_() {
+	switch (actionState_) {
+	case ActionState::Normal:
+		UpdateNormalState_();
+		break;
+	case ActionState::Attack:
+		UpdateAttackState_();
+		break;
+	}
+}
+
+void Player::UpdateNormalState_() {
+	UpdateMove_();
+	UpdateRoll_();
+}
+
+void Player::UpdateAttackState_() {
+	UpdateMove_();
+	UpdateRoll_();
+	FireBullet_();
+}
+
+void Player::UpdateMove_() {
+	if (inputLeft_) {
 		wt_.translation_.x -= moveSpeed_;
-	if (right)
+	}
+	if (inputRight_) {
 		wt_.translation_.x += moveSpeed_;
-	if (input_->PushKey(DIK_W))
+	}
+	if (inputUp_) {
 		wt_.translation_.y += moveSpeed_;
-	if (input_->PushKey(DIK_S))
+	}
+	if (inputDown_) {
 		wt_.translation_.y -= moveSpeed_;
+	}
+}
 
+void Player::UpdateRoll_() {
 	float targetRoll = 0.0f;
-	if (left && !right)
+	if (inputLeft_ && !inputRight_) {
 		targetRoll = +rollMaxRad_;
-	else if (right && !left)
+	} else if (inputRight_ && !inputLeft_) {
 		targetRoll = -rollMaxRad_;
+	}
 	rollRad_ += (targetRoll - rollRad_) * rollLerp_;
 	wt_.rotation_.z = rollRad_;
+}
 
-	const bool trig = input_->TriggerKey(DIK_SPACE) || input_->IsTriggerMouse(0);
-	if (trig) {
-		Vector3 spawn = wt_.translation_;
-		spawn.z += 0.6f;
-		Vector3 vel = {0.0f, 0.0f, bulletSpeed_};
-		auto& b = bullets_.emplace_back();
-		b.Initialize(spawn, vel);
-	}
+void Player::FireBullet_() {
+	Vector3 spawn = wt_.translation_;
+	spawn.z += 0.6f;
+	Vector3 vel = {0.0f, 0.0f, bulletSpeed_};
+	auto& b = bullets_.emplace_back();
+	b.Initialize(spawn, vel);
+}
 
-	for (auto& b : bullets_)
+void Player::UpdateBullets_() {
+	for (auto& b : bullets_) {
 		b.Update();
+	}
 	bullets_.remove_if([](const PlayerBullet& b) { return b.IsDead(); });
+}
 
+void Player::UpdateSpeed_() {
 	const Vector3 d = {wt_.translation_.x - prevPos_.x, wt_.translation_.y - prevPos_.y, wt_.translation_.z - prevPos_.z};
+
 	speedFrame_ = std::sqrt(d.x * d.x + d.y * d.y + d.z * d.z);
 	prevPos_ = wt_.translation_;
+}
 
+void Player::UpdateMatrix_() {
 	wt_.matWorld_ = MakeAffineMatrix(wt_.scale_, wt_.rotation_, wt_.translation_);
 	wt_.TransferMatrix();
 }
 
 void Player::Draw(Camera& cam) {
-	if (model_)
+	if (model_) {
 		model_->Draw(wt_, cam);
-	for (auto& b : bullets_)
+	}
+	for (auto& b : bullets_) {
 		b.Draw(cam);
+	}
 }
