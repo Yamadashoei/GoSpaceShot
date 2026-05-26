@@ -1,11 +1,15 @@
 #pragma once
 #include "Actor.h"
 #include "EnemyBullet.h"
+#include "IEnemyZState.h"
 #include "KamataEngine.h"
 #include <list>
+#include <memory>
 
 class Enemy : public Actor {
 public:
+	~Enemy() override;
+
 	void Initialize(KamataEngine::Model* model, const KamataEngine::Vector3& position);
 	void SetPosition(const KamataEngine::Vector3& pos);
 
@@ -30,22 +34,14 @@ public:
 	int GetHP() const override { return hp_; }
 	int GetMaxHP() const override { return 300; }
 
-private:
-	// ===== 状態管理（クラス内で軽く分ける）=====
-	enum class ZState { Normal, Special };
+	// ===== StatePattern用 =====
+	void ChangeZState(std::unique_ptr<IEnemyZState> newState);
+	void ApplyTargetGap(const KamataEngine::Vector3& playerPos, float targetGap, float deltaSec);
 
-private:
-	void UpdateState_(float deltaSec);
-	void UpdateXMove_(float deltaSec);
-	void UpdateZMove_(const KamataEngine::Vector3& playerPos, float deltaSec);
-	void UpdateZNormal_(const KamataEngine::Vector3& playerPos, float deltaSec);
-	void UpdateZSpecial_(const KamataEngine::Vector3& playerPos, float deltaSec);
-	void ApplyTargetGap_(const KamataEngine::Vector3& playerPos, float targetGap, float deltaSec);
-
-	void UpdateYMove_(float deltaSec);
-	void UpdateShot_(const KamataEngine::Vector3& playerPos, float deltaSec);
-	void UpdateBullets_();
-	void UpdateMatrix_();
+	float GetDesiredLeadZ() const { return desiredLeadZ_; }
+	float GetRetreatExtraMin() const { return retreatExtraMin_; }
+	float GetRetreatExtraMax() const { return retreatExtraMax_; }
+	float GetZCohesionRate() const { return zCohesionRate_; }
 
 private:
 	KamataEngine::WorldTransform wt_{};
@@ -57,13 +53,11 @@ private:
 
 	// Z 前後移動
 	float desiredLeadZ_ = 18.0f;
-	float zStateTimer_ = 0.0f;
-	ZState zState_ = ZState::Normal;
-	bool specialRetreat_ = false;
 	float retreatExtraMin_ = 6.0f;
 	float retreatExtraMax_ = 14.0f;
-	float specialRetreatGap_ = 0.0f;
 	float zCohesionRate_ = 3.0f;
+
+	std::unique_ptr<IEnemyZState> zState_;
 
 	// Y ランダム移動
 	float yTarget_ = 0.0f;
