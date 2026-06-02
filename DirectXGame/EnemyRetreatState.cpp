@@ -17,7 +17,7 @@ void EnemyRetreatState::Enter(Enemy& enemy) {
 	timer_ = RandRange_EnemyRetreat(0.7f, 1.3f);
 	retreatGap_ = enemy.GetDesiredLeadZ() + RandRange_EnemyRetreat(enemy.GetRetreatExtraMin(), enemy.GetRetreatExtraMax());
 }
-
+ 
 void EnemyRetreatState::Update(Enemy& enemy, const Vector3& playerPos, float deltaSec) {
 	timer_ -= deltaSec;
 	if (timer_ <= 0.0f) {
